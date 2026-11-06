@@ -99,9 +99,13 @@ Version catalogs in `gradle/`: `libs.versions.toml`, `kotlinx.versions.toml`, `a
 | `domain/` | Use cases in `…/interactor/` (e.g. `GetManga`), models, repo interfaces |
 | `data/` | SQLDelight DB, `*RepositoryImpl` (`tachiyomi.data.*`) |
 | `core:common/` | Network (OkHttp), security, storage, shared utils |
+| `core:common-kmp/` | Platform-neutral utils, preferences, logging (`commonMain`) |
+| `core:file/` | `PlatformFile` storage contract backed by Okio streams |
 | `core:archive/` | CBZ/archive reading with optional encryption |
 | `core-metadata/` | Comic-info metadata parsing |
 | `source-api/` / `source-local/` | Extension `Source` API + local source |
+| `source-api-common/` | Platform-neutral source contract/models (parallel to the Android ABI) |
+| `domain-common/` | Platform-neutral domain models/services (`Chapter`, `ChapterRecognition`, …) |
 | `presentation-core/` | Shared Compose components |
 | `presentation-widget/` | Home-screen Glance widget |
 | `i18n/` / `i18n-sy/` / `i18n-kmk/` | Strings → `MR` / `SYMR` / `KMR` (see [Internationalization](#internationalization-strings)) |
@@ -110,7 +114,7 @@ Version catalogs in `gradle/`: `libs.versions.toml`, `kotlinx.versions.toml`, `a
 | `macrobenchmark/` | Macrobenchmark tests (CI-only) |
 | `buildSrc/` | Convention plugins and build logic |
 
-Dependency flow: `app` → `domain` → `source-api`; `data` implements `domain` repos.
+Dependency flow: `app` → `domain` → `source-api`; `data` implements `domain` repos. The `*-common` modules are KMP (`androidTarget` + `jvm`): their `commonMain` must stay free of `android.*`, `androidx.*`, `java.*` and `kotlin.jvm.*` imports, using `expect`/`actual` or the `PlatformFile`/`Logger` abstractions instead.
 
 Package roots: `eu.kanade.tachiyomi.*` (legacy UI), `tachiyomi.*` (domain/data), `mihon.*` (Mihon upstream), `exh.*` (enhanced sources, SY).
 
@@ -183,14 +187,14 @@ Gradle `-P` flags (`buildSrc/src/main/kotlin/mihon/buildlogic/BuildConfig.kt`):
 ./gradlew assemblePreview                  # preview (beta) APK, CI equivalent
 ./gradlew assemblePreview -Pinclude-telemetry -Penable-updater  # full CI build
 ./gradlew assembleRelease                  # release APK
-./gradlew testReleaseUnitTest              # CI unit tests
+./gradlew testReleaseUnitTest jvmTest      # CI unit tests (Android + KMP JVM targets)
 ./gradlew test                             # all unit tests
 ./gradlew installDebug                     # install to device/emulator
 ./gradlew :data:generateSqlDelightInterface  # after .sq / .sqm changes
 ```
 
 **Workflows** (`.github/workflows/`):
-- `build_pull_request.yml` – PR validation: dependency review → wrapper validation → `spotlessCheck` → `assemblePreview` → `testReleaseUnitTest` → APK signing (authorized forks)
+- `build_pull_request.yml` – PR validation: dependency review → wrapper validation → `spotlessCheck` → `assemblePreview` → `testReleaseUnitTest jvmTest` → APK signing (authorized forks)
 - `build_push.yml` – push to `master`: full build + signing
 - `build_release.yml` – release builds from `v*` tags
 - `build_preview.yml` – manual preview builder
@@ -200,9 +204,9 @@ Gradle `-P` flags (`buildSrc/src/main/kotlin/mihon/buildlogic/BuildConfig.kt`):
 
 ## Tests
 
-- **Framework:** JUnit (Jupiter) + Kotest assertions + MockK
-- **Locations:** `domain/src/test/`, `app/src/test/` (e.g. `MigratorTest.kt`). No broad UI test suite — focus on domain and critical logic.
-- **Single class:** `./gradlew :domain:testReleaseUnitTest --tests "*.ClassName"`
+- **Framework:** JUnit (Jupiter) + Kotest assertions + MockK on Android modules; `kotlin.test` + Kotest assertions in KMP `commonTest` (no JUnit Jupiter/MockK there).
+- **Locations:** `domain/src/test/`, `app/src/test/` (e.g. `MigratorTest.kt`), and `commonTest/` in the `*-common` KMP modules. No broad UI test suite — focus on domain and critical logic.
+- **Single class:** `./gradlew :domain:testReleaseUnitTest --tests "*.ClassName"` (KMP: `./gradlew :domain-common:jvmTest --tests "*.ClassName"`)
 
 ---
 
