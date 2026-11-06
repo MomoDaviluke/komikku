@@ -6,6 +6,7 @@ import eu.kanade.presentation.more.settings.screen.SettingsMainScreen
 import eu.kanade.presentation.more.settings.screen.about.AboutScreen
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
+import eu.kanade.tachiyomi.ui.manga.notes.MangaNotesScreen
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldBeSameInstanceAs
@@ -25,6 +26,17 @@ class ScreenSerializationTest {
         val screen = AboutScreen()
 
         val restored = screen.roundTrip().shouldBeInstanceOf<AboutScreen>()
+
+        restored.key shouldBe screen.key
+    }
+
+    @Test
+    fun `manga notes screen only carries primitive arguments`() {
+        // Divergence from upstream mihonapp/mihon#3523: the notes screen loads the manga by ID,
+        // so [tachiyomi.domain.manga.model.Manga] no longer needs java.io.Serializable.
+        val screen = MangaNotesScreen(mangaId = 1L)
+
+        val restored = screen.roundTrip().shouldBeInstanceOf<MangaNotesScreen>()
 
         restored.key shouldBe screen.key
     }

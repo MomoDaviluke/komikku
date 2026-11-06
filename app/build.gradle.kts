@@ -195,6 +195,9 @@ dependencies {
     implementation(projects.core.common)
     implementation(projects.coreMetadata)
     implementation(projects.sourceApi)
+    // KMK -->
+    implementation(projects.sourceApiCommon)
+    // KMK <--
     implementation(projects.sourceLocal)
     implementation(projects.data)
     implementation(projects.domain)
