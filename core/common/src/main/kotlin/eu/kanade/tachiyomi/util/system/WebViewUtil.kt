@@ -7,7 +7,7 @@ import android.webkit.CookieManager
 import android.webkit.WebSettings
 import android.webkit.WebView
 import kotlinx.coroutines.suspendCancellableCoroutine
-import logcat.LogPriority
+import tachiyomi.core.common.util.system.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import kotlin.coroutines.resume
 

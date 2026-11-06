@@ -20,6 +20,10 @@ kotlin {
 }
 
 dependencies {
+    // KMK -->
+    api(projects.domainCommon)
+    // KMK <--
+
     implementation(projects.sourceApi)
     implementation(projects.core.common)
 

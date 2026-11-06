@@ -1,7 +1,7 @@
 package tachiyomi.domain.manga.interactor
 
 import kotlinx.coroutines.flow.Flow
-import logcat.LogPriority
+import tachiyomi.core.common.util.system.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.repository.MangaMergeRepository

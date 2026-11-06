@@ -80,7 +80,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import logcat.AndroidLogcatLogger
-import logcat.LogPriority
 import logcat.LogcatLogger
 import mihon.core.migration.Migrator
 import mihon.core.migration.migrations.migrations
@@ -90,6 +89,7 @@ import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.util.system.ImageUtil
+import tachiyomi.core.common.util.system.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.storage.service.StorageManager
 import tachiyomi.i18n.MR
@@ -101,6 +101,7 @@ import uy.kohesive.injekt.injectLazy
 import java.security.Security
 import java.text.SimpleDateFormat
 import java.util.Locale
+import logcat.LogPriority as LogcatPriority
 
 class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factory {
 
@@ -151,10 +152,10 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         if (!LogcatLogger.isInstalled) {
             val minLogPriority = when {
                 // KMK -->
-                EHLogLevel.isExtraLogging() -> LogPriority.VERBOSE
+                EHLogLevel.isExtraLogging() -> LogcatPriority.VERBOSE
                 // KMK <--
-                BuildConfig.DEBUG -> LogPriority.DEBUG
-                else -> LogPriority.INFO
+                BuildConfig.DEBUG -> LogcatPriority.DEBUG
+                else -> LogcatPriority.INFO
             }
             LogcatLogger.install()
             LogcatLogger.loggers += XLogLogcatLogger() // SY Redirect Logcat to XLog

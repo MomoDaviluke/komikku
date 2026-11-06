@@ -1,7 +1,11 @@
 package tachiyomi.source.local
 
+// KMK -->
+// Local source storage migrated from UniFile to the KMP PlatformFile contract.
+// Android archive/cover access is bridged via requireUniFile() in androidMain.
+// KMK <--
+
 import android.content.Context
-import com.hippo.unifile.UniFile
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.UnmeteredSource
 import eu.kanade.tachiyomi.source.model.FilterList
@@ -16,7 +20,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.supervisorScope
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
-import logcat.LogPriority
 import mihon.core.archive.ArchiveReader
 import mihon.core.archive.ZipWriter
 import mihon.core.archive.archiveReader
@@ -24,11 +27,11 @@ import mihon.core.archive.epubReader
 import nl.adaptivity.xmlutil.core.AndroidXmlReader
 import nl.adaptivity.xmlutil.serialization.XML
 import tachiyomi.core.common.i18n.stringResource
-import tachiyomi.core.common.storage.extension
-import tachiyomi.core.common.storage.nameWithoutExtension
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.ImageUtil
+import tachiyomi.core.common.util.system.LogPriority
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.core.file.PlatformFile
 import tachiyomi.core.metadata.comicinfo.COMIC_INFO_FILE
 import tachiyomi.core.metadata.comicinfo.ComicInfo
 import tachiyomi.core.metadata.comicinfo.ComicInfoPublishingStatus
@@ -43,6 +46,10 @@ import tachiyomi.source.local.image.LocalCoverManager
 import tachiyomi.source.local.io.Archive
 import tachiyomi.source.local.io.Format
 import tachiyomi.source.local.io.LocalSourceFileSystem
+import tachiyomi.source.local.io.openInputStream
+import tachiyomi.source.local.io.openOutputStream
+import tachiyomi.source.local.io.requireInputStream
+import tachiyomi.source.local.io.requireUniFile
 import tachiyomi.source.local.metadata.fillMetadata
 import uy.kohesive.injekt.injectLazy
 import java.io.InputStream
@@ -111,7 +118,7 @@ class LocalSource(
                 } else if (lastModifiedLimit == 0L) {
                     it.name.orEmpty().contains(query, ignoreCase = true)
                 } else {
-                    it.lastModified() >= lastModifiedLimit
+                    it.lastModified >= lastModifiedLimit
                 }
             }
 
@@ -126,9 +133,9 @@ class LocalSource(
                 }
                 is OrderBy.Latest -> {
                     mangaDirs = if (filter.state!!.ascending) {
-                        mangaDirs.sortedBy(UniFile::lastModified)
+                        mangaDirs.sortedBy { it.lastModified }
                     } else {
-                        mangaDirs.sortedByDescending(UniFile::lastModified)
+                        mangaDirs.sortedByDescending { it.lastModified }
                     }
                 }
                 else -> {
@@ -146,7 +153,7 @@ class LocalSource(
 
                         // Try to find the cover
                         coverManager.find(mangaDir.name.orEmpty())?.let {
-                            thumbnail_url = it.uri.toString()
+                            thumbnail_url = it.uri
                         }
                     }
                 }
@@ -162,7 +169,9 @@ class LocalSource(
         val existingFile = mangaDirFiles
             .firstOrNull { it.name == COMIC_INFO_FILE }
         val comicInfoArchiveFile = mangaDirFiles.firstOrNull { it.name == COMIC_INFO_ARCHIVE }
-        val comicInfoArchiveReader = comicInfoArchiveFile?.archiveReader(context)
+        // KMK -->
+        val comicInfoArchiveReader = comicInfoArchiveFile?.requireUniFile()?.archiveReader(context)
+        // KMK <--
         val existingComicInfo =
             (existingFile?.openInputStream() ?: comicInfoArchiveReader?.getInputStream(COMIC_INFO_FILE))?.use {
                 AndroidXmlReader(it, StandardCharsets.UTF_8.name()).use { xmlReader ->
@@ -210,13 +219,13 @@ class LocalSource(
     // Manga details related
     private suspend fun getMangaDetails(manga: SManga): SManga = withIOContext {
         coverManager.find(manga.url)?.let {
-            manga.thumbnail_url = it.uri.toString()
+            manga.thumbnail_url = it.uri
         }
 
         // Augment manga details based on metadata files
         try {
             val mangaDir = fileSystem.getMangaDirectory(manga.url) ?: error("${manga.url} is not a valid directory")
-            val mangaDirFiles = mangaDir.listFiles().orEmpty()
+            val mangaDirFiles = mangaDir.listFiles()
 
             val comicInfoFile = mangaDirFiles
                 .firstOrNull { it.name == COMIC_INFO_FILE }
@@ -233,14 +242,16 @@ class LocalSource(
                 // Top level ComicInfo.xml
                 comicInfoFile != null -> {
                     noXmlFile?.delete()
-                    setMangaDetailsFromComicInfoFile(comicInfoFile.openInputStream(), manga)
+                    comicInfoFile.openInputStream()?.let { setMangaDetailsFromComicInfoFile(it, manga) }
                 }
                 // SY -->
                 comicInfoArchiveFile != null -> {
                     noXmlFile?.delete()
 
-                    comicInfoArchiveFile.archiveReader(context).getInputStream(COMIC_INFO_FILE)
+                    // KMK -->
+                    comicInfoArchiveFile.requireUniFile().archiveReader(context).getInputStream(COMIC_INFO_FILE)
                         ?.let { setMangaDetailsFromComicInfoFile(it, manga) }
+                    // KMK <--
                 }
 
                 // SY <--
@@ -248,7 +259,7 @@ class LocalSource(
                 // Old custom JSON format
                 // TODO: remove support for this entirely after a while
                 legacyJsonDetailsFile != null -> {
-                    json.decodeFromStream<MangaDetails>(legacyJsonDetailsFile.openInputStream()).run {
+                    json.decodeFromStream<MangaDetails>(legacyJsonDetailsFile.requireInputStream()).run {
                         title?.let { manga.title = it }
                         author?.let { manga.author = it }
                         artist?.let { manga.artist = it }
@@ -258,14 +269,13 @@ class LocalSource(
                     }
                     // Replace with ComicInfo.xml file
                     val comicInfo = manga.getComicInfo()
-                    mangaDir
-                        .createFile(COMIC_INFO_FILE)
-                        ?.openOutputStream()
-                        ?.use {
+                    mangaDir.createFile(COMIC_INFO_FILE)?.let { file ->
+                        file.openOutputStream()?.use { output ->
                             val comicInfoString = xml.encodeToString(ComicInfo.serializer(), comicInfo)
-                            it.write(comicInfoString.toByteArray())
-                            legacyJsonDetailsFile.delete()
+                            output.write(comicInfoString.toByteArray())
                         }
+                        legacyJsonDetailsFile.delete()
+                    }
                 }
 
                 // Copy ComicInfo.xml from chapter archive to top level if found
@@ -275,12 +285,15 @@ class LocalSource(
                     val copiedFile = copyComicInfoFileFromChapters(chapterArchives, mangaDir)
 
                     // SY -->
+                    // KMK -->
                     if (copiedFile != null && copiedFile.name != COMIC_INFO_ARCHIVE) {
-                        setMangaDetailsFromComicInfoFile(copiedFile.openInputStream(), manga)
+                        copiedFile.openInputStream()?.let { setMangaDetailsFromComicInfoFile(it, manga) }
                     } else if (copiedFile != null && copiedFile.name == COMIC_INFO_ARCHIVE) {
-                        copiedFile.archiveReader(context).getInputStream(COMIC_INFO_FILE)
+                        copiedFile.requireUniFile().archiveReader(context).getInputStream(COMIC_INFO_FILE)
                             ?.let { setMangaDetailsFromComicInfoFile(it, manga) }
-                    } // SY <--
+                    }
+                    // KMK <--
+                    // SY <--
                     else {
                         // Avoid re-scanning
                         mangaDir.createFile(".noxml")
@@ -294,19 +307,19 @@ class LocalSource(
         return@withIOContext manga
     }
 
-    private fun <T> getComicInfoForChapter(chapter: UniFile, block: (InputStream, ArchiveReader?) -> T): T? {
+    private fun <T> getComicInfoForChapter(chapter: PlatformFile, block: (InputStream, ArchiveReader?) -> T): T? {
         if (chapter.isDirectory) {
             return chapter.findFile(COMIC_INFO_FILE)?.let { file ->
-                file.openInputStream().use { block(it, /* SY --> */ null /* SY <-- */) }
+                file.openInputStream()?.use { block(it, /* SY --> */ null /* SY <-- */) }
             }
         } else {
-            return chapter.archiveReader(context).use { reader ->
+            return chapter.requireUniFile().archiveReader(context).use { reader ->
                 reader.getInputStream(COMIC_INFO_FILE)?.use { block(it, /* SY --> */ reader /* SY <-- */) }
             }
         }
     }
 
-    private fun copyComicInfoFileFromChapters(chapterArchives: List<UniFile>, folder: UniFile): UniFile? {
+    private fun copyComicInfoFileFromChapters(chapterArchives: List<PlatformFile>, folder: PlatformFile): PlatformFile? {
         for (chapter in chapterArchives) {
             val file = getComicInfoForChapter(chapter) f@{ stream, /* SY --> */ reader /* SY <-- */ ->
                 return@f copyComicInfoFile(stream, folder, /* SY --> */ reader?.encrypted == true /* SY <-- */)
@@ -318,24 +331,24 @@ class LocalSource(
 
     private fun copyComicInfoFile(
         comicInfoFileStream: InputStream,
-        folder: UniFile,
+        folder: PlatformFile,
         // SY -->
         encrypt: Boolean,
         // SY <--
-    ): UniFile? {
+    ): PlatformFile? {
         // SY -->
         if (encrypt) {
             val comicInfoArchiveFile = folder.createFile(COMIC_INFO_ARCHIVE)
             comicInfoArchiveFile?.let { archive ->
-                ZipWriter(context, archive, encrypt = true).use { writer ->
+                ZipWriter(context, archive.requireUniFile(), encrypt = true).use { writer ->
                     writer.write(comicInfoFileStream.use { it.readBytes() }, COMIC_INFO_FILE)
                 }
             }
             return comicInfoArchiveFile
         } else {
             // SY <--
-            return folder.createFile(COMIC_INFO_FILE)?.apply {
-                openOutputStream().use { outputStream ->
+            return folder.createFile(COMIC_INFO_FILE)?.also { file ->
+                file.openOutputStream()?.use { outputStream ->
                     comicInfoFileStream.use { it.copyTo(outputStream) }
                 }
             }
@@ -372,16 +385,16 @@ class LocalSource(
                     name = if (chapterFile.isDirectory) {
                         chapterFile.name
                     } else {
-                        chapterFile.nameWithoutExtension
+                        chapterFile.name?.substringBeforeLast('.')
                     }.orEmpty()
-                    date_upload = chapterFile.lastModified()
+                    date_upload = chapterFile.lastModified
                     chapter_number = ChapterRecognition
                         .parseChapterNumber(manga.title, this.name, this.chapter_number.toDouble())
                         .toFloat()
 
                     val format = Format.valueOf(chapterFile)
                     if (format is Format.Epub) {
-                        format.file.epubReader(context).use { epub ->
+                        format.file.requireUniFile().epubReader(context).use { epub ->
                             epub.fillMetadata(manga, this)
                         }
                     } else {
@@ -426,24 +439,24 @@ class LocalSource(
         }
     }
 
-    private fun updateCover(chapter: SChapter, manga: SManga): UniFile? {
+    private fun updateCover(chapter: SChapter, manga: SManga): PlatformFile? {
         return try {
             when (val format = getFormat(chapter)) {
                 is Format.Directory -> {
                     val entry = format.file.listFiles()
-                        ?.sortedWith { f1, f2 ->
+                        .sortedWith { f1, f2 ->
                             f1.name.orEmpty().compareToCaseInsensitiveNaturalOrder(
                                 f2.name.orEmpty(),
                             )
                         }
-                        ?.find {
-                            !it.isDirectory && ImageUtil.isImage(it.name) { it.openInputStream() }
+                        .find {
+                            !it.isDirectory && ImageUtil.isImage(it.name) { it.requireInputStream() }
                         }
 
-                    entry?.let { coverManager.update(manga, it.openInputStream()) }
+                    entry?.let { file -> file.openInputStream()?.let { coverManager.update(manga, it) } }
                 }
                 is Format.Archive -> {
-                    format.file.archiveReader(context).use { reader ->
+                    format.file.requireUniFile().archiveReader(context).use { reader ->
                         val entry = reader.useEntries { entries ->
                             entries
                                 .sortedWith { f1, f2 -> f1.name.compareToCaseInsensitiveNaturalOrder(f2.name) }
@@ -454,7 +467,7 @@ class LocalSource(
                     }
                 }
                 is Format.Epub -> {
-                    format.file.epubReader(context).use { epub ->
+                    format.file.requireUniFile().epubReader(context).use { epub ->
                         val entry = epub.getImagesFromPages().firstOrNull()
 
                         entry?.let { coverManager.update(manga, epub.getInputStream(it)!!) }

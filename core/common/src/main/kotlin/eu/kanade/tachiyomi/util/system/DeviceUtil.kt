@@ -5,7 +5,7 @@ import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
 import androidx.core.content.getSystemService
-import logcat.LogPriority
+import tachiyomi.core.common.util.system.LogPriority
 import tachiyomi.core.common.util.system.logcat
 
 object DeviceUtil {

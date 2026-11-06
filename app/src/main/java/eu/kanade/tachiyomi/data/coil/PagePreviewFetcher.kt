@@ -14,7 +14,6 @@ import eu.kanade.tachiyomi.network.await
 import eu.kanade.tachiyomi.source.PagePreviewSource
 import eu.kanade.tachiyomi.source.online.HttpSource
 import exh.source.getMainSource
-import logcat.LogPriority
 import okhttp3.CacheControl
 import okhttp3.Call
 import okhttp3.Request
@@ -22,6 +21,7 @@ import okhttp3.Response
 import okio.FileSystem
 import okio.Path.Companion.toOkioPath
 import okio.Source
+import tachiyomi.core.common.util.system.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.source.service.SourceManager
 import uy.kohesive.injekt.injectLazy

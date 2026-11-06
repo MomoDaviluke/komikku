@@ -9,10 +9,10 @@ import eu.kanade.tachiyomi.network.parseAs
 import exh.md.utils.MdApi
 import exh.md.utils.MdConstants
 import exh.md.utils.MdUtil
-import logcat.LogPriority
 import okhttp3.FormBody
 import okhttp3.Headers
 import okhttp3.OkHttpClient
+import tachiyomi.core.common.util.system.LogPriority
 import tachiyomi.core.common.util.system.logcat
 
 class MangaDexLoginHelper(

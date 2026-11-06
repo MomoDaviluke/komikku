@@ -12,6 +12,7 @@ import eu.kanade.tachiyomi.ui.manga.notes.MangaNotesScreen
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
+import tachiyomi.presentation.core.screens.LoadingScreen
 
 @Composable
 fun MangaNotesScreen(
@@ -19,13 +20,19 @@ fun MangaNotesScreen(
     navigateUp: () -> Unit,
     onUpdate: (String) -> Unit,
 ) {
+    val manga = state.manga
+    if (manga == null) {
+        LoadingScreen()
+        return
+    }
+
     Scaffold(
         topBar = { topBarScrollBehavior ->
             AppBar(
                 titleContent = {
                     AppBarTitle(
                         title = stringResource(MR.strings.action_edit_notes),
-                        subtitle = state.manga.title,
+                        subtitle = manga.title,
                     )
                 },
                 navigateUp = navigateUp,

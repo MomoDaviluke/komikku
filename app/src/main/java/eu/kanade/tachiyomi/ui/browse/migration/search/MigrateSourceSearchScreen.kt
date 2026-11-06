@@ -44,6 +44,7 @@ import mihon.feature.migration.dialog.MigrateMangaDialog
 import mihon.feature.migration.list.MigrationListScreen
 import mihon.presentation.core.util.collectAsLazyPagingItems
 import tachiyomi.core.common.Constants
+import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
@@ -51,12 +52,14 @@ import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.source.local.LocalSource
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 /**
  * Opened when click on a source in [MigrateSearchScreen] while doing manual search for migration
  */
 data class MigrateSourceSearchScreen(
-    private val currentManga: Manga,
+    private val currentMangaId: Long,
     private val sourceId: Long,
     private val query: String?,
 ) : Screen() {
@@ -146,16 +149,21 @@ data class MigrateSourceSearchScreen(
             },
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         ) { paddingValues ->
-            val openMigrateDialog: (Manga) -> Unit = {
-                val migrateListScreen = navigator.items
-                    .filterIsInstance<MigrationListScreen>()
-                    .lastOrNull()
+            val openMigrateDialog: (Manga) -> Unit = { target ->
+                scope.launch {
+                    val currentManga = Injekt.get<GetManga>().await(currentMangaId) ?: return@launch
+                    val migrateListScreen = navigator.items
+                        .filterIsInstance<MigrationListScreen>()
+                        .lastOrNull()
 
-                if (migrateListScreen == null) {
-                    screenModel.setDialog(BrowseSourceScreenModel.Dialog.Migrate(target = it, current = currentManga))
-                } else {
-                    migrateListScreen.addMatchOverride(current = currentManga.id, target = it.id)
-                    navigator.popUntil { screen -> screen is MigrationListScreen }
+                    if (migrateListScreen == null) {
+                        screenModel.setDialog(
+                            BrowseSourceScreenModel.Dialog.Migrate(target = target, current = currentManga),
+                        )
+                    } else {
+                        migrateListScreen.addMatchOverride(current = currentMangaId, target = target.id)
+                        navigator.popUntil { screen -> screen is MigrationListScreen }
+                    }
                 }
             }
             BrowseSourceContent(
@@ -226,9 +234,9 @@ data class MigrateSourceSearchScreen(
             }
             is BrowseSourceScreenModel.Dialog.Migrate -> {
                 MigrateMangaDialog(
-                    current = currentManga,
+                    current = dialog.current,
                     target = dialog.target,
-                    // Initiated from the context of [currentManga] so we show [dialog.target].
+                    // Initiated from the context of [currentMangaId] so we show [dialog.target].
                     onClickTitle = { navigator.push(MangaScreen(dialog.target.id)) },
                     onDismissRequest = onDismissRequest,
                     onComplete = {

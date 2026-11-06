@@ -2,10 +2,10 @@ package mihon.core.migration.migrations
 
 import android.app.Application
 import eu.kanade.tachiyomi.data.cache.PagePreviewCache
-import logcat.LogPriority
 import mihon.core.migration.Migration
 import mihon.core.migration.MigrationContext
 import tachiyomi.core.common.util.lang.withIOContext
+import tachiyomi.core.common.util.system.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import java.io.File
 

@@ -5,15 +5,12 @@ import androidx.compose.runtime.Immutable
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import mihon.core.common.extensions.EMPTY
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
 import uy.kohesive.injekt.injectLazy
-import java.io.ObjectStreamException
 import java.time.Instant
-import java.io.Serializable as JavaSerializable
 
 @SuppressLint("UnsafeOptInUsageError")
 @Serializable
@@ -46,7 +43,7 @@ data class Manga(
     val version: Long,
     val notes: String,
     val memo: JsonObject,
-) : JavaSerializable {
+) {
 
     // SY -->
     /* KMK --> */ @Transient /* KMK <-- */
@@ -184,18 +181,5 @@ data class Manga(
         // SY -->
         private val getCustomMangaInfo: GetCustomMangaInfo by injectLazy()
         // SY <--
-    }
-
-    @Throws(ObjectStreamException::class)
-    private fun writeReplace(): Any {
-        return JavaToKotlinXSerializable(Json.encodeToString<Manga>(this))
-    }
-
-    class JavaToKotlinXSerializable(private val data: String) : JavaSerializable {
-
-        @Throws(ObjectStreamException::class)
-        private fun readResolve(): Any {
-            return Json.decodeFromString<Manga>(data)
-        }
     }
 }

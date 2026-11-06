@@ -12,8 +12,8 @@ import eu.kanade.tachiyomi.data.backup.models.BackupSource
 import eu.kanade.tachiyomi.data.backup.models.BackupSourcePreferences
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import logcat.LogPriority
-import logcat.logcat
+import tachiyomi.core.common.util.system.LogPriority
+import tachiyomi.core.common.util.system.logcat
 
 @Serializable
 data class SyncData(

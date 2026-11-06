@@ -13,7 +13,7 @@ import exh.md.similar.MangaDexSimilarPagingSource
 import exh.source.COMICK_IDS
 import exh.source.MANGADEX_IDS
 import kotlinx.serialization.json.Json
-import logcat.LogPriority
+import tachiyomi.core.common.util.system.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.data.source.BaseSourcePagingSource
 import tachiyomi.data.source.NoResultsException

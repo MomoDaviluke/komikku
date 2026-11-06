@@ -1,40 +1,47 @@
+// KMK -->
 package tachiyomi.source.local.image
 
 import android.content.Context
-import com.hippo.unifile.UniFile
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.util.storage.DiskUtil
 import mihon.core.archive.ZipWriter
-import tachiyomi.core.common.storage.nameWithoutExtension
 import tachiyomi.core.common.util.system.ImageUtil
+import tachiyomi.core.file.PlatformFile
 import tachiyomi.source.local.io.LocalSourceFileSystem
+import tachiyomi.source.local.io.requireInputStream
+import tachiyomi.source.local.io.requireOutputStream
+import tachiyomi.source.local.io.requireUniFile
 import java.io.InputStream
 
 private const val DEFAULT_COVER_NAME = "cover.jpg"
 private const val COVER_ARCHIVE_NAME = "cover.cbi"
 
-actual class LocalCoverManager(
+/**
+ * Android implementation of local cover handling. It depends on SAF (`UniFile`), the Android
+ * `ZipWriter` (encryption) and `DiskUtil`, so it intentionally stays in androidMain.
+ */
+class LocalCoverManager(
     private val context: Context,
     private val fileSystem: LocalSourceFileSystem,
 ) {
 
-    actual fun find(mangaUrl: String): UniFile? {
+    fun find(mangaUrl: String): PlatformFile? {
         return fileSystem.getFilesInMangaDirectory(mangaUrl)
             // Get all file whose names start with "cover"
-            .filter { it.isFile && it.nameWithoutExtension.equals("cover", ignoreCase = true) }
+            .filter { it.isFile && it.name?.substringBeforeLast('.')?.equals("cover", ignoreCase = true) == true }
             // Get the first actual image
             .firstOrNull {
-                ImageUtil.isImage(it.name) { it.openInputStream() } || it.name == COVER_ARCHIVE_NAME
+                ImageUtil.isImage(it.name) { it.requireInputStream() } || it.name == COVER_ARCHIVE_NAME
             }
     }
 
-    actual fun update(
+    fun update(
         manga: SManga,
         inputStream: InputStream,
         // SY -->
-        encrypted: Boolean,
+        encrypted: Boolean = false,
         // SY <--
-    ): UniFile? {
+    ): PlatformFile? {
         val directory = fileSystem.getMangaDirectory(manga.url)
         if (directory == null) {
             inputStream.close()
@@ -52,27 +59,29 @@ actual class LocalCoverManager(
             // SY <--
         }
 
-        targetFile!!
+        val file = targetFile ?: run {
+            inputStream.close()
+            return null
+        }
 
         inputStream.use { input ->
             // SY -->
             if (encrypted) {
-                ZipWriter(context, targetFile, encrypt = true).use { writer ->
+                ZipWriter(context, file.requireUniFile(), encrypt = true).use { writer ->
                     writer.write(inputStream.readBytes(), DEFAULT_COVER_NAME)
                 }
-                DiskUtil.createNoMediaFile(directory, context)
+                DiskUtil.createNoMediaFile(directory.requireUniFile(), context)
 
-                manga.thumbnail_url = targetFile.uri.toString()
-                return targetFile
+                manga.thumbnail_url = file.uri
+                return file
             } else {
                 // SY <--
-                targetFile.openOutputStream().use { output ->
-                    input.copyTo(output)
-                }
-                DiskUtil.createNoMediaFile(directory, context)
-                manga.thumbnail_url = targetFile.uri.toString()
-                return targetFile
+                file.requireOutputStream().use { out -> input.copyTo(out) }
+                DiskUtil.createNoMediaFile(directory.requireUniFile(), context)
+                manga.thumbnail_url = file.uri
+                return file
             }
         }
     }
 }
+// KMK <--

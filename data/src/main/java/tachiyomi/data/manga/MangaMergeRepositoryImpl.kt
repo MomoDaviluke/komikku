@@ -1,7 +1,7 @@
 package tachiyomi.data.manga
 
 import kotlinx.coroutines.flow.Flow
-import logcat.LogPriority
+import tachiyomi.core.common.util.system.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.data.DatabaseHandler
 import tachiyomi.domain.manga.model.Manga

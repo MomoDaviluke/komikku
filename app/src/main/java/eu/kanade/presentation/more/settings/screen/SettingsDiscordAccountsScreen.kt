@@ -44,7 +44,8 @@ import eu.kanade.tachiyomi.data.connections.discord.DiscordAccount
 import eu.kanade.tachiyomi.ui.setting.connections.DiscordLoginScreen
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import logcat.logcat
+import tachiyomi.core.common.util.system.LogPriority
+import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.presentation.core.components.material.Scaffold
@@ -167,7 +168,7 @@ class DiscordAccountsScreenModel : StateScreenModel<DiscordAccountsScreenState>(
             mutableState.update { it.copy(isLoading = true, error = null) }
             runCatching {
                 val accounts = discord.getAccounts()
-                logcat(logcat.LogPriority.DEBUG) { "Debug: Loaded accounts: $accounts" } // Debug log
+                logcat(LogPriority.DEBUG) { "Debug: Loaded accounts: $accounts" } // Debug log
                 if (accounts.isEmpty()) {
                     mutableState.update {
                         it.copy(

@@ -12,20 +12,22 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.manga.MangaNotesScreen
 import eu.kanade.presentation.util.Screen
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import tachiyomi.core.common.util.lang.launchNonCancellable
+import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.interactor.UpdateMangaNotes
 import tachiyomi.domain.manga.model.Manga
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
 class MangaNotesScreen(
-    private val manga: Manga,
+    private val mangaId: Long,
 ) : Screen() {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
 
-        val screenModel = rememberScreenModel { Model(manga) }
+        val screenModel = rememberScreenModel { Model(mangaId) }
         val state by screenModel.state.collectAsState()
 
         MangaNotesScreen(
@@ -36,11 +38,22 @@ class MangaNotesScreen(
     }
 
     private class Model(
-        private val manga: Manga,
+        private val mangaId: Long,
+        private val getManga: GetManga = Injekt.get(),
         private val updateMangaNotes: UpdateMangaNotes = Injekt.get(),
-    ) : StateScreenModel<State>(State(manga, manga.notes)) {
+    ) : StateScreenModel<State>(State(null, "", loading = true)) {
+
+        init {
+            screenModelScope.launch {
+                val manga = getManga.await(mangaId)
+                mutableState.update {
+                    if (manga != null) State(manga, manga.notes) else it.copy(loading = false)
+                }
+            }
+        }
 
         fun updateNotes(content: String) {
+            val manga = state.value.manga ?: return
             if (content == state.value.notes) return
 
             mutableState.update {
@@ -55,7 +68,8 @@ class MangaNotesScreen(
 
     @Immutable
     data class State(
-        val manga: Manga,
+        val manga: Manga?,
         val notes: String,
+        val loading: Boolean = false,
     )
 }

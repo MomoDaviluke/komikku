@@ -20,6 +20,7 @@ import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
 import tachiyomi.source.local.LocalSource
 import tachiyomi.source.local.io.Format
+import tachiyomi.source.local.io.requireUniFile
 
 /**
  * Loader used to retrieve the [PageLoader] for a given chapter.
@@ -130,9 +131,11 @@ class ChapterLoader(
                     source is HttpSource -> HttpPageLoader(chapter, source)
                     source is LocalSource -> source.getFormat(chapter.chapter).let { format ->
                         when (format) {
-                            is Format.Directory -> DirectoryPageLoader(format.file)
-                            is Format.Archive -> ArchivePageLoader(format.file.archiveReader(context))
-                            is Format.Epub -> EpubPageLoader(format.file.epubReader(context))
+                            // KMK --> PlatformFile-backed local files
+                            is Format.Directory -> DirectoryPageLoader(format.file.requireUniFile())
+                            is Format.Archive -> ArchivePageLoader(format.file.requireUniFile().archiveReader(context))
+                            is Format.Epub -> EpubPageLoader(format.file.requireUniFile().epubReader(context))
+                            // KMK <--
                         }
                     }
                     else -> error(context.stringResource(MR.strings.loader_not_implemented_error))
@@ -148,9 +151,11 @@ class ChapterLoader(
             )
             source is LocalSource -> source.getFormat(chapter.chapter).let { format ->
                 when (format) {
-                    is Format.Directory -> DirectoryPageLoader(format.file)
-                    is Format.Archive -> ArchivePageLoader(format.file.archiveReader(context))
-                    is Format.Epub -> EpubPageLoader(format.file.epubReader(context))
+                    // KMK --> PlatformFile-backed local files
+                    is Format.Directory -> DirectoryPageLoader(format.file.requireUniFile())
+                    is Format.Archive -> ArchivePageLoader(format.file.requireUniFile().archiveReader(context))
+                    is Format.Epub -> EpubPageLoader(format.file.requireUniFile().epubReader(context))
+                    // KMK <--
                 }
             }
             source is HttpSource -> HttpPageLoader(chapter, source)

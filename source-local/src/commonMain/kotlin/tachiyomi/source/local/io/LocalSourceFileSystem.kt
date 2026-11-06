@@ -1,14 +1,21 @@
+// KMK -->
 package tachiyomi.source.local.io
 
-import com.hippo.unifile.UniFile
+import tachiyomi.core.file.PlatformFile
 
-expect class LocalSourceFileSystem {
+class LocalSourceFileSystem(
+    private val baseDirectoryProvider: () -> PlatformFile?,
+) {
 
-    fun getBaseDirectory(): UniFile?
+    fun getBaseDirectory(): PlatformFile? = baseDirectoryProvider()
 
-    fun getFilesInBaseDirectory(): List<UniFile>
+    fun getFilesInBaseDirectory(): List<PlatformFile> =
+        getBaseDirectory()?.listFiles().orEmpty()
 
-    fun getMangaDirectory(name: String): UniFile?
+    fun getMangaDirectory(name: String): PlatformFile? =
+        getBaseDirectory()?.findFile(name)?.takeIf { it.isDirectory }
 
-    fun getFilesInMangaDirectory(name: String): List<UniFile>
+    fun getFilesInMangaDirectory(name: String): List<PlatformFile> =
+        getMangaDirectory(name)?.listFiles().orEmpty()
 }
+// KMK <--

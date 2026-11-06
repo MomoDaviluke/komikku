@@ -58,6 +58,7 @@ import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.storage.service.StorageManager
 import tachiyomi.source.local.image.LocalCoverManager
 import tachiyomi.source.local.io.LocalSourceFileSystem
+import tachiyomi.source.local.io.UniFilePlatformFile
 import uy.kohesive.injekt.api.InjektModule
 import uy.kohesive.injekt.api.InjektRegistrar
 import uy.kohesive.injekt.api.addSingleton
@@ -184,7 +185,13 @@ class AppModule(val app: Application) : InjektModule {
         addSingletonFactory { ImageSaver(app) }
 
         addSingletonFactory { AndroidStorageFolderProvider(app) }
-        addSingletonFactory { LocalSourceFileSystem(get()) }
+        // KMK -->
+        addSingletonFactory {
+            LocalSourceFileSystem {
+                get<StorageManager>().getLocalSourceDirectory()?.let(::UniFilePlatformFile)
+            }
+        }
+        // KMK <--
         addSingletonFactory { LocalCoverManager(app, get()) }
         addSingletonFactory { StorageManager(app, get()) }
 

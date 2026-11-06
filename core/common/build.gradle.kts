@@ -19,12 +19,14 @@ kotlin {
 }
 
 dependencies {
+    // KMK -->
+    api(projects.core.commonKmp)
+    // KMK <--
+
     implementation(projects.i18n)
     // SY -->
     implementation(projects.i18nSy)
     // SY <--
-
-    api(libs.logcat)
 
     api(libs.rxjava)
 

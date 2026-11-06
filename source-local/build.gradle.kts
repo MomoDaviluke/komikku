@@ -10,17 +10,29 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation(projects.sourceApi)
-                api(projects.i18n)
-                // SY -->
-                api(projects.i18nSy)
-                // SY <--
-
-                implementation(libs.unifile)
+                // KMK -->
+                api(projects.core.file)
+                // KMK <--
             }
         }
+        // KMK -->
+        val androidUnitTest by getting {
+            dependencies {
+                implementation(libs.bundles.test)
+                runtimeOnly(libs.junit.platform.launcher)
+            }
+        }
+        // KMK <--
+
         val androidMain by getting {
             dependencies {
+                // KMK -->
+                api(projects.sourceApi)
+                api(libs.unifile)
+                implementation(projects.i18n)
+                implementation(projects.i18nSy)
+                // KMK <--
+
                 implementation(projects.core.archive)
                 implementation(projects.core.common)
                 implementation(projects.coreMetadata)

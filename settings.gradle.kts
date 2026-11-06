@@ -45,8 +45,15 @@ include(":app")
 include(":core-metadata")
 include(":core:archive")
 include(":core:common")
+// KMK -->
+include(":core:file")
+include(":core:common-kmp")
+// KMK <--
 include(":data")
 include(":domain")
+// KMK -->
+include(":domain-common")
+// KMK <--
 include(":i18n")
 // KMK -->
 include(":i18n-kmk")
@@ -59,5 +66,8 @@ include(":macrobenchmark")
 include(":presentation-core")
 include(":presentation-widget")
 include(":source-api")
+// KMK -->
+include(":source-api-common")
+// KMK <--
 include(":source-local")
 include(":telemetry")

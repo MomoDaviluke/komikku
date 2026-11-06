@@ -1,7 +1,6 @@
 package tachiyomi.domain.source.interactor
 
-import logcat.LogPriority
-import logcat.asLog
+import tachiyomi.core.common.util.system.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.source.model.FeedSavedSearch
 import tachiyomi.domain.source.repository.FeedSavedSearchRepository
@@ -14,7 +13,7 @@ class InsertFeedSavedSearch(
         return try {
             feedSavedSearchRepository.insert(feedSavedSearch)
         } catch (e: Exception) {
-            logcat(LogPriority.ERROR) { e.asLog() }
+            logcat(LogPriority.ERROR) { e.stackTraceToString() }
             null
         }
     }
@@ -23,7 +22,7 @@ class InsertFeedSavedSearch(
         try {
             feedSavedSearchRepository.insertAll(feedSavedSearch)
         } catch (e: Exception) {
-            logcat(LogPriority.ERROR) { e.asLog() }
+            logcat(LogPriority.ERROR) { e.stackTraceToString() }
         }
     }
 }

@@ -10,9 +10,9 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
-import logcat.LogPriority
 import rx.Observable
 import tachiyomi.core.common.util.QuerySanitizer.sanitize
+import tachiyomi.core.common.util.system.LogPriority
 import tachiyomi.core.common.util.system.logcat
 
 /**
