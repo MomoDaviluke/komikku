@@ -1,7 +1,7 @@
 package tachiyomi.data
 
 import app.cash.sqldelight.ColumnAdapter
-import eu.kanade.tachiyomi.source.model.UpdateStrategy
+import eu.kanade.tachiyomi.source.common.model.UpdateStrategy
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import java.util.Date

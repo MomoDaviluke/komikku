@@ -31,6 +31,7 @@ kotlin {
 
 dependencies {
     implementation(projects.sourceApi)
+    implementation(projects.sourceApiCommon)
     implementation(projects.domain)
     implementation(projects.core.common)
 

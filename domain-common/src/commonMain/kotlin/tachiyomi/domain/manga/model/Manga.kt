@@ -1,19 +1,14 @@
 package tachiyomi.domain.manga.model
 
-import android.annotation.SuppressLint
-import androidx.compose.runtime.Immutable
-import eu.kanade.tachiyomi.source.model.UpdateStrategy
+import eu.kanade.tachiyomi.source.common.model.UpdateStrategy
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlinx.serialization.json.JsonObject
 import mihon.core.common.extensions.EMPTY
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.domain.manga.service.MangaCustomInfo
-import java.time.Instant
 
-@SuppressLint("UnsafeOptInUsageError")
 @Serializable
-@Immutable
 data class Manga(
     val id: Long,
     val source: Long,
@@ -74,13 +69,12 @@ data class Manga(
         get() = customMangaInfo?.status ?: ogStatus
     // SY <--
 
-    val expectedNextUpdate: Instant?
+    val expectedNextUpdate: Long?
         get() = nextUpdate
             /* KMK -->
             Always predict release date even for Completed entries
             .takeIf { status != SManga.COMPLETED.toLong() }?
              KMK <-- */
-            .let { Instant.ofEpochMilli(it) }
 
     val sorting: Long
         get() = chapterFlags and CHAPTER_SORTING_MASK

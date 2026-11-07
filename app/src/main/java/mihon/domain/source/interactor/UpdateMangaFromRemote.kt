@@ -19,6 +19,7 @@ import tachiyomi.domain.chapter.repository.ChapterRepository
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaUpdate
+import tachiyomi.domain.manga.model.toCommon
 import tachiyomi.domain.manga.repository.MangaRepository
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.source.local.isLocal
@@ -185,7 +186,7 @@ class UpdateMangaFromRemote(
                 genre = remoteManga.getGenres(),
                 thumbnailUrl = thumbnailUrl,
                 status = remoteManga.status.toLong(),
-                updateStrategy = remoteManga.update_strategy,
+                updateStrategy = remoteManga.update_strategy.toCommon(),
                 initialized = true,
                 memo = remoteManga.memo,
             ),

@@ -11,6 +11,7 @@ import tachiyomi.core.metadata.comicinfo.ComicInfo
 import tachiyomi.core.metadata.comicinfo.ComicInfoPublishingStatus
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.manga.model.toCommon
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
@@ -74,7 +75,7 @@ fun Manga.copyFrom(other: SManga): Manga {
         // SY -->
         ogStatus = other.status.toLong(),
         // SY <--
-        updateStrategy = other.update_strategy,
+        updateStrategy = other.update_strategy.toCommon(),
         initialized = other.initialized && initialized,
         memo = other.memo,
     )

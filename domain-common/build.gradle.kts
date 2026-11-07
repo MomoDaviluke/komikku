@@ -15,6 +15,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 api(projects.core.commonKmp)
+                api(projects.sourceApiCommon)
                 api(kotlinx.serialization.json)
             }
         }

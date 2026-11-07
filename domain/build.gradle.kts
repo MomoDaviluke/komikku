@@ -25,6 +25,7 @@ dependencies {
     // KMK <--
 
     implementation(projects.sourceApi)
+    implementation(projects.sourceApiCommon)
     implementation(projects.core.common)
 
     implementation(platform(kotlinx.coroutines.bom))

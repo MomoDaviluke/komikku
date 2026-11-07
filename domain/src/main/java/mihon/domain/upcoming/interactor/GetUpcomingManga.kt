@@ -1,7 +1,7 @@
 package mihon.domain.upcoming.interactor
 
+import eu.kanade.tachiyomi.source.common.model.UpdateStrategy
 import eu.kanade.tachiyomi.source.model.SManga
-import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import kotlinx.coroutines.flow.Flow
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.library.service.LibraryPreferences.Companion.MANGA_HAS_UNREAD
