@@ -55,6 +55,8 @@ Moved as a result: `MangaCover`, `HistoryWithRelations`, `UpdatesWithRelations`,
   `UpdatesPreferences`, `LibraryPreferences`, `StoragePreferences`, `AppUpdatePolicy`
 - `LibraryGroup` constants moved; its `MR`/`SYMR` label mapping stays in the Android `domain`
   module as the `groupTypeStringRes` extension
+- Release: `Release`, `ReleaseService`, `GetApplicationRelease` (the 2-day check throttle now uses
+  epoch millis instead of `java.time.Instant`)
 
 Still Android-side: `MangaMetadataRepository` (source metadata types),
 `FavoritesEntryRepository` (`FavoriteEntry` uses `EHentaiSearchMetadata`), `SavedSearchRepository`
