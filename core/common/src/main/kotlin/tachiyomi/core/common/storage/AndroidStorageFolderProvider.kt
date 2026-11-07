@@ -14,7 +14,7 @@ class AndroidStorageFolderProvider(
     /**
      * This will return File: /storage/emulated/0/<app_name>
      */
-    override fun directory(): File {
+    private fun directory(): File {
         return File(
             Environment.getExternalStorageDirectory().absolutePath + File.separator +
                 context.stringResource(MR.strings.app_name),
