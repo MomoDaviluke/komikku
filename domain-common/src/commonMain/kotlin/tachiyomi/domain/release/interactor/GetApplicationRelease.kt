@@ -4,8 +4,10 @@ import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.domain.release.model.Release
 import tachiyomi.domain.release.service.ReleaseService
-import java.time.Instant
-import java.time.temporal.ChronoUnit
+
+// KMK -->
+private const val CHECK_INTERVAL_MILLIS = 2L * 24 * 60 * 60 * 1000
+// KMK <--
 
 class GetApplicationRelease(
     private val service: ReleaseService,
@@ -17,11 +19,11 @@ class GetApplicationRelease(
     }
 
     suspend fun await(arguments: Arguments): Result {
-        val now = Instant.now()
+        val now = System.currentTimeMillis()
 
         // Limit checks to once every 3 days at most
-        val nextCheckTime = Instant.ofEpochMilli(lastChecked.get()).plus(2, ChronoUnit.DAYS)
-        if (!arguments.forceCheck && now.isBefore(nextCheckTime)) {
+        val nextCheckTime = lastChecked.get() + CHECK_INTERVAL_MILLIS
+        if (!arguments.forceCheck && now < nextCheckTime) {
             return Result.NoNewUpdate
         }
 
@@ -40,7 +42,7 @@ class GetApplicationRelease(
         val latest = releases.getLatest() ?: return Result.NoNewUpdate
         // KMK <--
 
-        lastChecked.set(now.toEpochMilli())
+        lastChecked.set(now)
 
         // Check if latest version is different from current version
         val isNewVersion = isNewVersion(
