@@ -1,11 +1,10 @@
 package tachiyomi.domain.history.model
 
-import java.util.Date
-
+// KMK --> Platform-neutral epoch millis
 data class History(
     val id: Long,
     val chapterId: Long,
-    val readAt: Date?,
+    val readAt: Long?,
     val readDuration: Long,
 ) {
     companion object {
@@ -17,3 +16,4 @@ data class History(
         )
     }
 }
+// KMK <--

@@ -25,6 +25,12 @@ fun Date.toTimestampString(): String {
     return DateFormat.getTimeInstance(DateFormat.SHORT).format(this)
 }
 
+// KMK -->
+fun Long.toTimestampString(): String {
+    return Date(this).toTimestampString()
+}
+// KMK <--
+
 fun Long.convertEpochMillisZone(
     from: ZoneId,
     to: ZoneId,

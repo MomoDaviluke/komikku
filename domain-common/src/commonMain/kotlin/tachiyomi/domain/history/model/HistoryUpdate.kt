@@ -1,9 +1,9 @@
 package tachiyomi.domain.history.model
 
-import java.util.Date
-
+// KMK --> Platform-neutral epoch millis
 data class HistoryUpdate(
     val chapterId: Long,
-    val readAt: Date,
+    val readAt: Long,
     val sessionReadDuration: Long,
 )
+// KMK <--

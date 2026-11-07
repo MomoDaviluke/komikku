@@ -105,7 +105,6 @@ import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.time.Instant
-import java.util.Date
 
 /**
  * Presenter used by the activity to perform background operations.
@@ -908,8 +907,8 @@ class ReaderViewModel @JvmOverloads constructor(
             if (incognitoMode) return@let
 
             val chapterId = readerChapter.chapter.id!!
-            val endTime = Date()
-            val sessionReadDuration = chapterReadStartTime?.let { endTime.time - it } ?: 0
+            val endTime = Instant.now().toEpochMilli()
+            val sessionReadDuration = chapterReadStartTime?.let { endTime - it } ?: 0
 
             upsertHistory.await(HistoryUpdate(chapterId, endTime, sessionReadDuration))
             chapterReadStartTime = null

@@ -14,7 +14,9 @@ object HistoryMapper {
     ): History = History(
         id = id,
         chapterId = chapterId,
-        readAt = readAt,
+        // KMK --> domain models use epoch millis
+        readAt = readAt?.time,
+        // KMK <--
         readDuration = readDuration,
     )
 
@@ -50,7 +52,9 @@ object HistoryMapper {
         totalCountCalculated = totalCount.toLong(),
         readCountCalculated = readCount.toLong(),
         // KMK <--
-        readAt = readAt,
+        // KMK --> domain models use epoch millis
+        readAt = readAt?.time,
+        // KMK <--
         readDuration = readDuration,
         coverData = MangaCover(
             mangaId = mangaId,

@@ -1,7 +1,8 @@
 package tachiyomi.domain.category.model
 
-import java.io.Serializable
-
+// KMK -->
+// Platform-neutral model: Java serialization is Android-only and must not leak into commonMain.
+// KMK <--
 data class Category(
     val id: Long,
     val name: String,
@@ -10,7 +11,7 @@ data class Category(
     // KMK -->
     val hidden: Boolean,
     // KMK <--
-) : Serializable {
+) {
 
     val isSystemCategory: Boolean = id == UNCATEGORIZED_ID
 

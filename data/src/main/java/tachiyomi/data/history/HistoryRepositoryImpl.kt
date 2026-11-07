@@ -10,6 +10,7 @@ import tachiyomi.domain.history.model.HistoryUpdate
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.domain.history.repository.HistoryRepository
 import tachiyomi.domain.manga.model.Manga
+import java.util.Date
 
 class HistoryRepositoryImpl(
     private val handler: DatabaseHandler,
@@ -91,7 +92,9 @@ class HistoryRepositoryImpl(
             handler.await {
                 historyQueries.upsert(
                     historyUpdate.chapterId,
-                    historyUpdate.readAt,
+                    // KMK --> SQLDelight column still uses Date
+                    Date(historyUpdate.readAt),
+                    // KMK <--
                     historyUpdate.sessionReadDuration,
                 )
             }
@@ -107,7 +110,9 @@ class HistoryRepositoryImpl(
                 historyUpdates.forEach { historyUpdate ->
                     historyQueries.upsert(
                         historyUpdate.chapterId,
-                        historyUpdate.readAt,
+                        // KMK --> SQLDelight column still uses Date
+                        Date(historyUpdate.readAt),
+                        // KMK <--
                         historyUpdate.sessionReadDuration,
                     )
                 }

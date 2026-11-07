@@ -428,9 +428,8 @@ class MangaRestorer(
             item.copy(
                 id = dbHistory._id,
                 chapterId = dbHistory.chapter_id,
-                readAt = max(item.readAt?.time ?: 0L, dbHistory.last_read?.time ?: 0L)
-                    .takeIf { it > 0L }
-                    ?.let { Date(it) },
+                readAt = max(item.readAt ?: 0L, dbHistory.last_read?.time ?: 0L)
+                    .takeIf { it > 0L },
                 readDuration = max(item.readDuration, dbHistory.time_read) - dbHistory.time_read,
             )
         }
@@ -440,7 +439,9 @@ class MangaRestorer(
                 toUpdate.forEach {
                     historyQueries.upsert(
                         it.chapterId,
-                        it.readAt,
+                        // KMK --> SQLDelight column still uses Date
+                        it.readAt?.let(::Date),
+                        // KMK <--
                         it.readDuration,
                     )
                 }

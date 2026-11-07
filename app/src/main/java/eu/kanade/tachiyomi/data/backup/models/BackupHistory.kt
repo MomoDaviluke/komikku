@@ -3,7 +3,6 @@ package eu.kanade.tachiyomi.data.backup.models
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoNumber
 import tachiyomi.domain.history.model.History
-import java.util.Date
 
 @Serializable
 data class BackupHistory(
@@ -13,7 +12,7 @@ data class BackupHistory(
 ) {
     fun getHistoryImpl(): History {
         return History.create().copy(
-            readAt = Date(lastRead),
+            readAt = lastRead,
             readDuration = readDuration,
         )
     }

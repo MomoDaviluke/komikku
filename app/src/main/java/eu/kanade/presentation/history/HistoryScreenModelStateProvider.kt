@@ -10,7 +10,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
-import java.util.Date
 import kotlin.random.Random
 
 class HistoryScreenModelStateProvider : PreviewParameterProvider<HistoryScreenModel.State> {
@@ -83,13 +82,13 @@ class HistoryScreenModelStateProvider : PreviewParameterProvider<HistoryScreenMo
     // KMK -->
     private object HistoryWithRelationExamples {
         val headerToday = randItem()
-        val headerTomorrow = randItem(LocalDate.now().plusDays(1).toDate())
+        val headerTomorrow = randItem(LocalDate.now().plusDays(1).toEpochMilliAtStartOfDay())
 
         fun header(instantBuilder: (Instant) -> Instant = { it }) =
-            randItem(LocalDate.from(instantBuilder(Instant.now())).toDate())
+            randItem(LocalDate.from(instantBuilder(Instant.now())).toEpochMilliAtStartOfDay())
 
-        fun LocalDate.toDate(zone: ZoneId = ZoneId.systemDefault()): Date =
-            Date.from(atStartOfDay(zone).toInstant())
+        fun LocalDate.toEpochMilliAtStartOfDay(zone: ZoneId = ZoneId.systemDefault()): Long =
+            atStartOfDay(zone).toInstant().toEpochMilli()
         // KMK <--
 
         fun items() = sequence {
@@ -102,7 +101,7 @@ class HistoryScreenModelStateProvider : PreviewParameterProvider<HistoryScreenMo
 
         fun randItem(
             // KMK -->
-            readAt: Date = Date.from(Instant.now()),
+            readAt: Long = Instant.now().toEpochMilli(),
             // KMK <--
             historyBuilder: (HistoryWithRelations) -> HistoryWithRelations = { it },
         ) =

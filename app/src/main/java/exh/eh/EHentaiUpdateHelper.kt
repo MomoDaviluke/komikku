@@ -190,7 +190,7 @@ class EHentaiUpdateHelper(context: Context) {
         val newHistory = currentChapters.mapNotNull { chapter ->
             val newHistory = history[chapter.url]
                 ?.maxByOrNull {
-                    it.readAt?.time ?: 0
+                    it.readAt ?: 0
                 }
                 ?.takeIf { it.chapterId != chapter.id && it.readAt != null }
             if (newHistory != null) {
