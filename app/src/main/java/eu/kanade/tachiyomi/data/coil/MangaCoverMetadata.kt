@@ -10,7 +10,6 @@ import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.MangaCover
 import uy.kohesive.injekt.injectLazy
 import java.io.File
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Object that holds info about a covers size ratio + dominant colors
@@ -22,7 +21,7 @@ object MangaCoverMetadata {
 
     fun load() {
         val ratios = preferences.coverRatios().get()
-        MangaCover.coverRatioMap = ConcurrentHashMap(
+        MangaCover.setCoverRatios(
             ratios.mapNotNull {
                 val splits = it.split("|")
                 val id = splits.firstOrNull()?.toLongOrNull()
@@ -35,7 +34,7 @@ object MangaCoverMetadata {
             }.toMap(),
         )
         val colors = preferences.coverColors().get()
-        MangaCover.dominantCoverColorMap = ConcurrentHashMap(
+        MangaCover.setDominantCoverColors(
             colors.mapNotNull {
                 val splits = it.split("|")
                 val id = splits.firstOrNull()?.toLongOrNull()
@@ -149,14 +148,13 @@ object MangaCoverMetadata {
     }
 
     fun MangaCover.remove() {
-        MangaCover.coverRatioMap.remove(mangaId)
-        MangaCover.dominantCoverColorMap.remove(mangaId)
+        MangaCover.removeCoverData(mangaId)
     }
 
     fun savePrefs() {
-        val mapCopy = MangaCover.coverRatioMap.toMap()
+        val mapCopy = MangaCover.coverRatiosSnapshot()
         preferences.coverRatios().set(mapCopy.map { "${it.key}|${it.value}" }.toSet())
-        val mapColorCopy = MangaCover.dominantCoverColorMap.toMap()
+        val mapColorCopy = MangaCover.dominantCoverColorsSnapshot()
         preferences.coverColors().set(mapColorCopy.map { "${it.key}|${it.value.first}|${it.value.second}" }.toSet())
     }
 

@@ -771,7 +771,7 @@ class ReaderActivity : BaseActivity() {
     private fun seedColorStatic(): ComposeColor? {
         return viewModel.manga?.asMangaCover()?.vibrantCoverColor?.let { ComposeColor(it) }
             ?: intent.extras?.getLong("manga")?.takeIf { it > 0 }
-                ?.let { MangaCover.vibrantCoverColorMap[it] }
+                ?.let { MangaCover.vibrantCoverColor(it) }
                 ?.let { ComposeColor(it) }
     }
     // KMK <--

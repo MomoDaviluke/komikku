@@ -1,7 +1,8 @@
 package tachiyomi.domain.manga.model
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import tachiyomi.domain.manga.service.MangaCustomInfo
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Contains the required data for MangaCoverFetcher
@@ -30,19 +31,17 @@ data class MangaCover(
      * [vibrantCoverColor] is used to set the color theme in manga detail page.
      * It contains color for all mangas, both in library or browsing.
      *
-     * It reads/saves to a hashmap in [MangaCover.vibrantCoverColorMap] for multiple mangas.
+     * It reads/saves to a process-local cache for multiple mangas.
      */
     var vibrantCoverColor: Int?
-        get() = vibrantCoverColorMap[mangaId]
+        get() = vibrantCoverColors.value[mangaId]
         set(value) {
-            vibrantCoverColorMap[mangaId] = value
+            vibrantCoverColors.update { it + (mangaId to value) }
         }
 
     /**
      * [dominantCoverColors] is used to set cover/text's color in Library (Favorite) grid view.
      * It contains only color for in-library (favorite) mangas.
-     *
-     * It reads/saves to a hashmap in [MangaCover.dominantCoverColorMap].
      *
      * Format: <first: cover color, second: text color>.
      *
@@ -54,37 +53,56 @@ data class MangaCover(
      */
     @Suppress("KDocUnresolvedReference")
     var dominantCoverColors: Pair<Int, Int>?
-        get() = dominantCoverColorMap[mangaId]
+        get() = dominantCoverColorsMap.value[mangaId]
         set(value) {
             value ?: return
-            dominantCoverColorMap[mangaId] = value.first to value.second
+            dominantCoverColorsMap.update { it + (mangaId to value) }
         }
 
     var ratio: Float?
-        get() = coverRatioMap[mangaId]
+        get() = coverRatios.value[mangaId]
         set(value) {
             value ?: return
-            coverRatioMap[mangaId] = value
+            coverRatios.update { it + (mangaId to value) }
         }
 
     companion object {
         /**
-         * [vibrantCoverColorMap] store color generated while browsing library.
-         * It always empty at beginning each time app starts, then add more color while browsing.
+         * Stores color generated while browsing library.
+         * It is always empty at the start of each app process.
          */
-        val vibrantCoverColorMap: HashMap<Long, Int?> = hashMapOf()
+        private val vibrantCoverColors = MutableStateFlow<Map<Long, Int?>>(emptyMap())
 
         /**
-         * [dominantCoverColorMap] stores favorite manga's cover & text's color as a joined string in Prefs.
-         * They will be loaded each time *[App]* is initialized with *[MangaCoverMetadata.load]*.
-         *
-         * They will be saved back when *[MainActivity.onPause]* is triggered.
+         * Stores favorite manga's cover & text colors. They are loaded from preferences by
+         * *[MangaCoverMetadata.load]* and saved back when *[MainActivity.onPause]* is triggered.
          */
         @Suppress("KDocUnresolvedReference")
-        var dominantCoverColorMap = ConcurrentHashMap<Long, Pair<Int, Int>>()
+        private val dominantCoverColorsMap = MutableStateFlow<Map<Long, Pair<Int, Int>>>(emptyMap())
 
-        var coverRatioMap = ConcurrentHashMap<Long, Float>()
-        // KMK <--
+        private val coverRatios = MutableStateFlow<Map<Long, Float>>(emptyMap())
+
+        fun vibrantCoverColor(mangaId: Long): Int? = vibrantCoverColors.value[mangaId]
+
+        fun dominantCoverColor(mangaId: Long): Pair<Int, Int>? = dominantCoverColorsMap.value[mangaId]
+
+        fun setDominantCoverColors(values: Map<Long, Pair<Int, Int>>) {
+            dominantCoverColorsMap.value = values
+        }
+
+        fun setCoverRatios(values: Map<Long, Float>) {
+            coverRatios.value = values
+        }
+
+        fun removeCoverData(mangaId: Long) {
+            vibrantCoverColors.update { it - mangaId }
+            dominantCoverColorsMap.update { it - mangaId }
+            coverRatios.update { it - mangaId }
+        }
+
+        fun coverRatiosSnapshot(): Map<Long, Float> = coverRatios.value
+
+        fun dominantCoverColorsSnapshot(): Map<Long, Pair<Int, Int>> = dominantCoverColorsMap.value
     }
 }
 
