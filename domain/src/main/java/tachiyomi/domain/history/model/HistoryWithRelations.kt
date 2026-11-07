@@ -1,8 +1,7 @@
 package tachiyomi.domain.history.model
 
-import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
 import tachiyomi.domain.manga.model.MangaCover
-import uy.kohesive.injekt.injectLazy
+import tachiyomi.domain.manga.service.MangaCustomInfo
 
 data class HistoryWithRelations(
     val id: Long,
@@ -25,11 +24,7 @@ data class HistoryWithRelations(
     val coverData: MangaCover,
 ) {
     // SY -->
-    val title: String = customMangaManager.get(mangaId)?.title ?: ogTitle
-
-    companion object {
-        private val customMangaManager: GetCustomMangaInfo by injectLazy()
-    }
+    val title: String = MangaCustomInfo.get(mangaId)?.title ?: ogTitle
     // SY <--
 
     // KMK -->

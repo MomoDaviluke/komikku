@@ -1,7 +1,6 @@
 package tachiyomi.domain.manga.model
 
-import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
-import uy.kohesive.injekt.injectLazy
+import tachiyomi.domain.manga.service.MangaCustomInfo
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -18,7 +17,7 @@ data class MangaCover(
 ) {
     // SY -->
     private val customThumbnailUrl = if (isMangaFavorite) {
-        getCustomMangaInfo.get(mangaId)?.thumbnailUrl
+        MangaCustomInfo.get(mangaId)?.thumbnailUrl
     } else {
         null
     }
@@ -86,10 +85,6 @@ data class MangaCover(
 
         var coverRatioMap = ConcurrentHashMap<Long, Float>()
         // KMK <--
-
-        // SY -->
-        private val getCustomMangaInfo: GetCustomMangaInfo by injectLazy()
-        // SY <--
     }
 }
 

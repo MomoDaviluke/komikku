@@ -91,6 +91,8 @@ import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.util.system.ImageUtil
 import tachiyomi.core.common.util.system.LogPriority
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
+import tachiyomi.domain.manga.service.MangaCustomInfo
 import tachiyomi.domain.storage.service.StorageManager
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.widget.WidgetManager
@@ -147,6 +149,10 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         Injekt.importModule(SYPreferenceModule(this))
         Injekt.importModule(SYDomainModule())
         // SY <--
+
+        // KMK -->
+        MangaCustomInfo.install { mangaId -> Injekt.get<GetCustomMangaInfo>().get(mangaId) }
+        // KMK <--
 
         setupExhLogging() // EXH logging
         if (!LogcatLogger.isInstalled) {

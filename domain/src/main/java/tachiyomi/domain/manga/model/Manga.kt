@@ -8,8 +8,7 @@ import kotlinx.serialization.Transient
 import kotlinx.serialization.json.JsonObject
 import mihon.core.common.extensions.EMPTY
 import tachiyomi.core.common.preference.TriState
-import tachiyomi.domain.manga.interactor.GetCustomMangaInfo
-import uy.kohesive.injekt.injectLazy
+import tachiyomi.domain.manga.service.MangaCustomInfo
 import java.time.Instant
 
 @SuppressLint("UnsafeOptInUsageError")
@@ -48,7 +47,7 @@ data class Manga(
     // SY -->
     /* KMK --> */ @Transient /* KMK <-- */
     private val customMangaInfo = if (favorite) {
-        getCustomMangaInfo.get(id)
+        MangaCustomInfo.get(id)
     } else {
         null
     }
@@ -177,9 +176,5 @@ data class Manga(
             notes = "",
             memo = JsonObject.EMPTY,
         )
-
-        // SY -->
-        private val getCustomMangaInfo: GetCustomMangaInfo by injectLazy()
-        // SY <--
     }
 }
