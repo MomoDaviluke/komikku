@@ -1,9 +1,9 @@
-# KMP Phase 3 — Screens, repositories, preferences
+# KMP Phase 3 — Screens, contracts, and Manga
 
 **Branch:** `refactor/kmp-phase3-screens-and-contracts` (stacked on Phase 2)
 **Status:** implementation complete and verified with a clean build
-**Goal:** remove the remaining Java-serialization constraint from `Track`, and move
-platform-neutral repository contracts and preference services into `domain-common`.
+**Goal:** remove the last Java-serialization constraint from `Track`, move platform-neutral
+contracts/preferences into `domain-common`, and move `Manga` plus its dependent models.
 
 ## Track screens
 
@@ -16,38 +16,48 @@ the remove dialogs load on demand.
 
 `Track` therefore no longer implements `java.io.Serializable` and now lives in `domain-common`.
 
+## Manga and custom info
+
+`Manga` now lives in `domain-common` with these changes:
+
+- `GetCustomMangaInfo` is replaced by a `MangaCustomInfo` provider (`fun interface
+  MangaCustomInfoProvider`). Android installs the repository-backed implementation in `App.kt`;
+  iOS can install its own. `Manga.title/author/artist/thumbnailUrl/description/genre/status`
+  keep resolving custom info through it.
+- `updateStrategy` uses `source-api-common.model.UpdateStrategy`. The SQLDelight column type, the
+  column adapter, backup models, library-update checks, and `SManga` conversions were updated.
+- `expectedNextUpdate` is epoch millis (`Long?`) instead of `java.time.Instant`; the manga screen
+  converts to `Instant` at the UI boundary.
+- Removed the Compose `@Immutable` and Android `@SuppressLint` annotations.
+
+Also moved with `Manga`: `MangaUpdate`, `MangaWithChapterCount`, `MergeMangaSettingsUpdate`,
+`LibraryManga`, `MangaRepository`, `MangaMergeRepository`, and `ChapterSort`.
+
 ## Repositories and preferences moved to `domain-common`
 
-- Repositories: `CategoryRepository`, `ChapterRepository`, `LibraryUpdateErrorRepository`,
+- Repositories: `CategoryRepository`, `ChapterRepository`, `MangaRepository`,
+  `MangaMergeRepository`, `LibraryUpdateErrorRepository`,
   `LibraryUpdateErrorWithRelationsRepository`, `LibraryUpdateErrorMessageRepository`,
   `CustomMangaRepository`, `FeedSavedSearchRepository`, `TrackRepository`
-- Model: `CategoryUpdate`
+- Models: `CategoryUpdate`
 - Preferences/services: `BackupPreferences`, `DownloadPreferences`, `HistoryPreferences`,
   `UpdatesPreferences`, `AppUpdatePolicy`
 
-Still Android-side because they depend on `Manga`, `FolderProvider`, `androidx.paging`, or
-`source-api` ABI types: `MangaRepository`, `MangaMergeRepository`, `MangaMetadataRepository`,
-`FavoritesEntryRepository`, `HistoryRepository`, `UpdatesRepository`, `SavedSearchRepository`,
-`StubSourceRepository`, `SourceRepository`, `LibraryPreferences`, `ChapterSort`,
-`StoragePreferences`.
+Still Android-side: `MangaCover` (process-local `ConcurrentHashMap` caches),
+`HistoryWithRelations` / `UpdatesWithRelations` (hold `MangaCover`), `HistoryRepository`,
+`UpdatesRepository`, `MangaMetadataRepository` (source metadata types), `FavoritesEntryRepository`
+(source metadata), `SavedSearchRepository`, `StubSourceRepository`, `SourceRepository`
+(`androidx.paging`), `LibraryPreferences` (`LibraryGroup` uses string resources),
+`StoragePreferences` (`FolderProvider`), `StorageManager`, `SourceManager`.
 
-## Manga design proposal (next)
+## Follow-ups
 
-`Manga` is the main remaining blocker. Proposed sequence:
-
-1. Replace the Injekt `GetCustomMangaInfo` lookup inside `Manga` with a
-   `MangaCustomInfoProvider` interface in `domain-common`; Android installs its implementation at
-   startup (the existing `GetCustomMangaInfo` becomes the adapter). This preserves the
-   `title`/`author`/`thumbnailUrl`/... override behavior on Android and gives iOS a platform hook.
-2. Change `Manga.updateStrategy` to the common `source-api-common.model.UpdateStrategy` and map at
-   the `SManga` boundary (`SManga.toDomainManga`, `Manga.toSManga`) and in the DB mapper.
-3. Replace `expectedNextUpdate: Instant?` with epoch millis (`Long?`) or `kotlinx-datetime`, and
-   update the upcoming-screen consumers.
-4. Drop `@Immutable` from `Manga` (or add Compose runtime to `domain-common`); it is a stability
-   hint, not behavior.
-5. Move `Manga`, then `MangaUpdate`, `MangaWithChapterCount`, `LibraryManga`, `MangaCover`,
-   `HistoryWithRelations`, and `UpdatesWithRelations` (the last three also need their Injekt
-   `GetCustomMangaInfo` usages replaced by the provider).
+- `Manga` lost `@Immutable`; consider a KMP-compatible stability annotation if Compose
+  recomposition measurements show a regression.
+- `MangaCover`'s caches need a KMP-safe concurrent map before `HistoryWithRelations`,
+  `UpdatesWithRelations`, and their repositories can move.
+- `Manga.toSManga()` still does not copy `updateStrategy` back to `SManga` (pre-existing behavior).
+- iOS targets and Kotlin/Native actuals still require a macOS host.
 
 ## Verification
 
@@ -56,6 +66,7 @@ Still Android-side because they depend on `Manga`, `FolderProvider`, `androidx.p
 ./gradlew spotlessCheck
 ./gradlew assembleDebug
 ./gradlew testReleaseUnitTest jvmTest
+./gradlew verifySqlDelightMigration
 ```
 
 `domain-common/commonMain` must stay free of `android.*`, `androidx.*`, `java.*`, `kotlin.jvm.*`,
