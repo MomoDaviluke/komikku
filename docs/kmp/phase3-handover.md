@@ -52,13 +52,14 @@ Moved as a result: `MangaCover`, `HistoryWithRelations`, `UpdatesWithRelations`,
   `CustomMangaRepository`, `FeedSavedSearchRepository`, `TrackRepository`
 - Models: `CategoryUpdate`
 - Preferences/services: `BackupPreferences`, `DownloadPreferences`, `HistoryPreferences`,
-  `UpdatesPreferences`, `AppUpdatePolicy`
+  `UpdatesPreferences`, `LibraryPreferences`, `StoragePreferences`, `AppUpdatePolicy`
+- `LibraryGroup` constants moved; its `MR`/`SYMR` label mapping stays in the Android `domain`
+  module as the `groupTypeStringRes` extension
 
 Still Android-side: `MangaMetadataRepository` (source metadata types),
 `FavoritesEntryRepository` (`FavoriteEntry` uses `EHentaiSearchMetadata`), `SavedSearchRepository`
 (`EXHSavedSearch` uses the source ABI `FilterList`), `StubSourceRepository` (`StubSource`),
-`SourceRepository` (`androidx.paging`), `LibraryPreferences` (`LibraryGroup` uses string
-resources), `StorageManager`, `SourceManager`.
+`SourceRepository` (`androidx.paging`), `StorageManager`, `SourceManager`.
 
 ## Follow-ups
 
@@ -67,8 +68,6 @@ resources), `StorageManager`, `SourceManager`.
 - `Manga.toSManga()` still does not copy `updateStrategy` back to `SManga` (pre-existing behavior).
 - `FavoriteEntry`/`EXHSavedSearch`/`StubSource` still depend on `source-api` ABI types; moving them
   requires a shared metadata/source abstraction.
-- `LibraryGroup` mixes constants with `MR`/`SYMR` string resources; split constants from the
-  resource mapping before moving `LibraryPreferences`.
 - iOS targets and Kotlin/Native actuals still require a macOS host.
 
 ## Verification
