@@ -33,6 +33,17 @@ the remove dialogs load on demand.
 Also moved with `Manga`: `MangaUpdate`, `MangaWithChapterCount`, `MergeMangaSettingsUpdate`,
 `LibraryManga`, `MangaRepository`, `MangaMergeRepository`, and `ChapterSort`.
 
+## Cover cache and history/updates
+
+`MangaCover`'s process-local caches used `ConcurrentHashMap`/`HashMap`. They are now
+`MutableStateFlow<Map<...>>` with accessor methods (`vibrantCoverColor(id)`,
+`dominantCoverColor(id)`, `setCoverRatios`, `removeCoverData`, `...Snapshot`). This removed the last
+JVM-only type from the cover model and made it safe to move.
+
+Moved as a result: `MangaCover`, `HistoryWithRelations`, `UpdatesWithRelations`,
+`HistoryRepository`, `UpdatesRepository`, and `StoragePreferences`. `FolderProvider` moved to
+`core:common-kmp` (the Android implementation keeps its private `File` directory helper).
+
 ## Repositories and preferences moved to `domain-common`
 
 - Repositories: `CategoryRepository`, `ChapterRepository`, `MangaRepository`,
@@ -43,20 +54,21 @@ Also moved with `Manga`: `MangaUpdate`, `MangaWithChapterCount`, `MergeMangaSett
 - Preferences/services: `BackupPreferences`, `DownloadPreferences`, `HistoryPreferences`,
   `UpdatesPreferences`, `AppUpdatePolicy`
 
-Still Android-side: `MangaCover` (process-local `ConcurrentHashMap` caches),
-`HistoryWithRelations` / `UpdatesWithRelations` (hold `MangaCover`), `HistoryRepository`,
-`UpdatesRepository`, `MangaMetadataRepository` (source metadata types), `FavoritesEntryRepository`
-(source metadata), `SavedSearchRepository`, `StubSourceRepository`, `SourceRepository`
-(`androidx.paging`), `LibraryPreferences` (`LibraryGroup` uses string resources),
-`StoragePreferences` (`FolderProvider`), `StorageManager`, `SourceManager`.
+Still Android-side: `MangaMetadataRepository` (source metadata types),
+`FavoritesEntryRepository` (`FavoriteEntry` uses `EHentaiSearchMetadata`), `SavedSearchRepository`
+(`EXHSavedSearch` uses the source ABI `FilterList`), `StubSourceRepository` (`StubSource`),
+`SourceRepository` (`androidx.paging`), `LibraryPreferences` (`LibraryGroup` uses string
+resources), `StorageManager`, `SourceManager`.
 
 ## Follow-ups
 
 - `Manga` lost `@Immutable`; consider a KMP-compatible stability annotation if Compose
   recomposition measurements show a regression.
-- `MangaCover`'s caches need a KMP-safe concurrent map before `HistoryWithRelations`,
-  `UpdatesWithRelations`, and their repositories can move.
 - `Manga.toSManga()` still does not copy `updateStrategy` back to `SManga` (pre-existing behavior).
+- `FavoriteEntry`/`EXHSavedSearch`/`StubSource` still depend on `source-api` ABI types; moving them
+  requires a shared metadata/source abstraction.
+- `LibraryGroup` mixes constants with `MR`/`SYMR` string resources; split constants from the
+  resource mapping before moving `LibraryPreferences`.
 - iOS targets and Kotlin/Native actuals still require a macOS host.
 
 ## Verification
