@@ -96,6 +96,7 @@ import tachiyomi.presentation.core.components.LabeledCheckbox
 import tachiyomi.presentation.core.components.material.AlertDialogContent
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
+import tachiyomi.presentation.core.screens.LoadingScreen
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
@@ -144,7 +145,7 @@ data class TrackInfoDialogHomeScreen(
                     onStatusClick = {
                         navigator.push(
                             TrackStatusSelectorScreen(
-                                track = it.track!!,
+                                trackId = it.track!!.id,
                                 serviceId = it.tracker.id,
                             ),
                         )
@@ -152,7 +153,7 @@ data class TrackInfoDialogHomeScreen(
                     onChapterClick = {
                         navigator.push(
                             TrackChapterSelectorScreen(
-                                track = it.track!!,
+                                trackId = it.track!!.id,
                                 serviceId = it.tracker.id,
                             ),
                         )
@@ -160,7 +161,7 @@ data class TrackInfoDialogHomeScreen(
                     onScoreClick = {
                         navigator.push(
                             TrackScoreSelectorScreen(
-                                track = it.track!!,
+                                trackId = it.track!!.id,
                                 serviceId = it.tracker.id,
                             ),
                         )
@@ -168,7 +169,7 @@ data class TrackInfoDialogHomeScreen(
                     onStartDateEdit = {
                         navigator.push(
                             TrackDateSelectorScreen(
-                                track = it.track!!,
+                                trackId = it.track!!.id,
                                 serviceId = it.tracker.id,
                                 start = true,
                             ),
@@ -177,7 +178,7 @@ data class TrackInfoDialogHomeScreen(
                     onEndDateEdit = {
                         navigator.push(
                             TrackDateSelectorScreen(
-                                track = it.track!!,
+                                trackId = it.track!!.id,
                                 serviceId = it.tracker.id,
                                 start = false,
                             ),
@@ -197,7 +198,7 @@ data class TrackInfoDialogHomeScreen(
                         navigator.push(
                             TrackerRemoveScreen(
                                 mangaId = mangaId,
-                                track = it.track!!,
+                                trackId = it.track!!.id,
                                 serviceId = it.tracker.id,
                             ),
                         )
@@ -415,7 +416,7 @@ data class TrackInfoDialogHomeScreen(
 }
 
 private data class TrackStatusSelectorScreen(
-    private val track: Track,
+    private val trackId: Long,
     private val serviceId: Long,
 ) : Screen() {
 
@@ -424,13 +425,17 @@ private data class TrackStatusSelectorScreen(
         val navigator = LocalNavigator.currentOrThrow
         val screenModel = rememberScreenModel {
             Model(
-                track = track,
+                trackId = trackId,
                 tracker = Injekt.get<TrackerManager>().get(serviceId)!!,
             )
         }
         val state by screenModel.state.collectAsState()
+        val currentState = state ?: run {
+            LoadingScreen()
+            return
+        }
         TrackStatusSelector(
-            selection = state.selection,
+            selection = currentState.selection,
             onSelectionChange = screenModel::setSelection,
             selections = remember { screenModel.getSelections() },
             onConfirm = {
@@ -442,21 +447,33 @@ private data class TrackStatusSelectorScreen(
     }
 
     private class Model(
-        private val track: Track,
+        private val trackId: Long,
         private val tracker: Tracker,
-    ) : StateScreenModel<Model.State>(State(track.status)) {
+        private val getTracks: GetTracks = Injekt.get(),
+    ) : StateScreenModel<Model.State?>(null) {
+
+        private var track: Track? = null
+
+        init {
+            screenModelScope.launch {
+                track = getTracks.awaitOne(trackId)
+                track?.let { mutableState.value = State(it.status) }
+            }
+        }
 
         fun getSelections(): Map<Long, StringResource?> {
             return tracker.getStatusList().associateWith { tracker.getStatus(it) }
         }
 
         fun setSelection(selection: Long) {
-            mutableState.update { it.copy(selection = selection) }
+            mutableState.update { it?.copy(selection = selection) }
         }
 
         fun setStatus() {
+            val track = track ?: return
+            val selection = state.value?.selection ?: return
             screenModelScope.launchNonCancellable {
-                tracker.setRemoteStatus(track.toDbTrack(), state.value.selection)
+                tracker.setRemoteStatus(track.toDbTrack(), selection)
             }
         }
 
@@ -468,7 +485,7 @@ private data class TrackStatusSelectorScreen(
 }
 
 private data class TrackChapterSelectorScreen(
-    private val track: Track,
+    private val trackId: Long,
     private val serviceId: Long,
 ) : Screen() {
 
@@ -477,14 +494,18 @@ private data class TrackChapterSelectorScreen(
         val navigator = LocalNavigator.currentOrThrow
         val screenModel = rememberScreenModel {
             Model(
-                track = track,
+                trackId = trackId,
                 tracker = Injekt.get<TrackerManager>().get(serviceId)!!,
             )
         }
         val state by screenModel.state.collectAsState()
+        val currentState = state ?: run {
+            LoadingScreen()
+            return
+        }
 
         TrackChapterSelector(
-            selection = state.selection,
+            selection = currentState.selection,
             onSelectionChange = screenModel::setSelection,
             range = remember { screenModel.getRange() },
             onConfirm = {
@@ -496,13 +517,24 @@ private data class TrackChapterSelectorScreen(
     }
 
     private class Model(
-        private val track: Track,
+        private val trackId: Long,
         private val tracker: Tracker,
-    ) : StateScreenModel<Model.State>(State(track.lastChapterRead.toInt())) {
+        private val getTracks: GetTracks = Injekt.get(),
+    ) : StateScreenModel<Model.State?>(null) {
+
+        private var track: Track? = null
+
+        init {
+            screenModelScope.launch {
+                track = getTracks.awaitOne(trackId)
+                track?.let { mutableState.value = State(it.lastChapterRead.toInt()) }
+            }
+        }
 
         fun getRange(): Iterable<Int> {
-            val endRange = if (track.totalChapters > 0) {
-                track.totalChapters
+            val totalChapters = track?.totalChapters ?: 0
+            val endRange = if (totalChapters > 0) {
+                totalChapters
             } else {
                 10000
             }
@@ -510,12 +542,14 @@ private data class TrackChapterSelectorScreen(
         }
 
         fun setSelection(selection: Int) {
-            mutableState.update { it.copy(selection = selection) }
+            mutableState.update { it?.copy(selection = selection) }
         }
 
         fun setChapter() {
+            val track = track ?: return
+            val selection = state.value?.selection ?: return
             screenModelScope.launchNonCancellable {
-                tracker.setRemoteLastChapterRead(track.toDbTrack(), state.value.selection)
+                tracker.setRemoteLastChapterRead(track.toDbTrack(), selection)
             }
         }
 
@@ -527,7 +561,7 @@ private data class TrackChapterSelectorScreen(
 }
 
 private data class TrackScoreSelectorScreen(
-    private val track: Track,
+    private val trackId: Long,
     private val serviceId: Long,
 ) : Screen() {
 
@@ -536,14 +570,18 @@ private data class TrackScoreSelectorScreen(
         val navigator = LocalNavigator.currentOrThrow
         val screenModel = rememberScreenModel {
             Model(
-                track = track,
+                trackId = trackId,
                 tracker = Injekt.get<TrackerManager>().get(serviceId)!!,
             )
         }
         val state by screenModel.state.collectAsState()
+        val currentState = state ?: run {
+            LoadingScreen()
+            return
+        }
 
         TrackScoreSelector(
-            selection = state.selection,
+            selection = currentState.selection,
             onSelectionChange = screenModel::setSelection,
             selections = remember { screenModel.getSelections() },
             onConfirm = {
@@ -555,21 +593,33 @@ private data class TrackScoreSelectorScreen(
     }
 
     private class Model(
-        private val track: Track,
+        private val trackId: Long,
         private val tracker: Tracker,
-    ) : StateScreenModel<Model.State>(State(tracker.displayScore(track))) {
+        private val getTracks: GetTracks = Injekt.get(),
+    ) : StateScreenModel<Model.State?>(null) {
+
+        private var track: Track? = null
+
+        init {
+            screenModelScope.launch {
+                track = getTracks.awaitOne(trackId)
+                track?.let { mutableState.value = State(tracker.displayScore(it)) }
+            }
+        }
 
         fun getSelections(): ImmutableList<String> {
             return tracker.getScoreList()
         }
 
         fun setSelection(selection: String) {
-            mutableState.update { it.copy(selection = selection) }
+            mutableState.update { it?.copy(selection = selection) }
         }
 
         fun setScore() {
+            val track = track ?: return
+            val selection = state.value?.selection ?: return
             screenModelScope.launchNonCancellable {
-                tracker.setRemoteScore(track.toDbTrack(), state.value.selection)
+                tracker.setRemoteScore(track.toDbTrack(), selection)
             }
         }
 
@@ -581,67 +631,73 @@ private data class TrackScoreSelectorScreen(
 }
 
 private data class TrackDateSelectorScreen(
-    private val track: Track,
+    private val trackId: Long,
     private val serviceId: Long,
     private val start: Boolean,
 ) : Screen() {
-
-    @Transient
-    private val selectableDates = object : SelectableDates {
-        override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-            val targetDate = Instant.ofEpochMilli(utcTimeMillis).toLocalDate(ZoneOffset.UTC)
-
-            // Disallow future dates
-            if (targetDate > LocalDate.now(ZoneOffset.UTC)) return false
-
-            return when {
-                // Disallow setting start date after finish date
-                start && track.finishDate > 0 -> {
-                    val finishDate = Instant.ofEpochMilli(track.finishDate).toLocalDate(ZoneOffset.UTC)
-                    targetDate <= finishDate
-                }
-                // Disallow setting finish date before start date
-                !start && track.startDate > 0 -> {
-                    val startDate = Instant.ofEpochMilli(track.startDate).toLocalDate(ZoneOffset.UTC)
-                    startDate <= targetDate
-                }
-                else -> {
-                    true
-                }
-            }
-        }
-
-        override fun isSelectableYear(year: Int): Boolean {
-            // Disallow future years
-            if (year > LocalDate.now(ZoneOffset.UTC).year) return false
-
-            return when {
-                // Disallow setting start year after finish year
-                start && track.finishDate > 0 -> {
-                    val finishDate = Instant.ofEpochMilli(track.finishDate).toLocalDate(ZoneOffset.UTC)
-                    year <= finishDate.year
-                }
-                // Disallow setting finish year before start year
-                !start && track.startDate > 0 -> {
-                    val startDate = Instant.ofEpochMilli(track.startDate).toLocalDate(ZoneOffset.UTC)
-                    startDate.year <= year
-                }
-                else -> {
-                    true
-                }
-            }
-        }
-    }
 
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val screenModel = rememberScreenModel {
             Model(
-                track = track,
+                trackId = trackId,
                 tracker = Injekt.get<TrackerManager>().get(serviceId)!!,
                 start = start,
             )
+        }
+        val state by screenModel.state.collectAsState()
+        val track = state ?: run {
+            LoadingScreen()
+            return
+        }
+
+        val selectableDates = remember(track) {
+            object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                    val targetDate = Instant.ofEpochMilli(utcTimeMillis).toLocalDate(ZoneOffset.UTC)
+
+                    // Disallow future dates
+                    if (targetDate > LocalDate.now(ZoneOffset.UTC)) return false
+
+                    return when {
+                        // Disallow setting start date after finish date
+                        start && track.finishDate > 0 -> {
+                            val finishDate = Instant.ofEpochMilli(track.finishDate).toLocalDate(ZoneOffset.UTC)
+                            targetDate <= finishDate
+                        }
+                        // Disallow setting finish date before start date
+                        !start && track.startDate > 0 -> {
+                            val startDate = Instant.ofEpochMilli(track.startDate).toLocalDate(ZoneOffset.UTC)
+                            startDate <= targetDate
+                        }
+                        else -> {
+                            true
+                        }
+                    }
+                }
+
+                override fun isSelectableYear(year: Int): Boolean {
+                    // Disallow future years
+                    if (year > LocalDate.now(ZoneOffset.UTC).year) return false
+
+                    return when {
+                        // Disallow setting start year after finish year
+                        start && track.finishDate > 0 -> {
+                            val finishDate = Instant.ofEpochMilli(track.finishDate).toLocalDate(ZoneOffset.UTC)
+                            year <= finishDate.year
+                        }
+                        // Disallow setting finish year before start year
+                        !start && track.startDate > 0 -> {
+                            val startDate = Instant.ofEpochMilli(track.startDate).toLocalDate(ZoneOffset.UTC)
+                            startDate.year <= year
+                        }
+                        else -> {
+                            true
+                        }
+                    }
+                }
+            }
         }
 
         val canRemove = if (start) {
@@ -667,22 +723,33 @@ private data class TrackDateSelectorScreen(
     }
 
     private class Model(
-        private val track: Track,
+        private val trackId: Long,
         private val tracker: Tracker,
         private val start: Boolean,
-    ) : ScreenModel {
+        private val getTracks: GetTracks = Injekt.get(),
+    ) : StateScreenModel<Track?>(null) {
+
+        private var track: Track? = null
+
+        init {
+            screenModelScope.launch {
+                track = getTracks.awaitOne(trackId)
+                mutableState.value = track
+            }
+        }
 
         // In UTC
         val initialSelection: Long
             get() {
-                val millis = (if (start) track.startDate else track.finishDate)
-                    .takeIf { it != 0L }
+                val millis = (if (start) track?.startDate else track?.finishDate)
+                    ?.takeIf { it != 0L }
                     ?: Instant.now().toEpochMilli()
                 return millis.convertEpochMillisZone(ZoneOffset.systemDefault(), ZoneOffset.UTC)
             }
 
         // In UTC
         fun setDate(millis: Long) {
+            val track = track ?: return
             // Convert to local time
             val localMillis = millis.convertEpochMillisZone(ZoneOffset.UTC, ZoneOffset.systemDefault())
             screenModelScope.launchNonCancellable {
@@ -695,13 +762,13 @@ private data class TrackDateSelectorScreen(
         }
 
         fun confirmRemoveDate(navigator: Navigator) {
-            navigator.push(TrackDateRemoverScreen(track, tracker.id, start))
+            navigator.push(TrackDateRemoverScreen(trackId, tracker.id, start))
         }
     }
 }
 
 private data class TrackDateRemoverScreen(
-    private val track: Track,
+    private val trackId: Long,
     private val serviceId: Long,
     private val start: Boolean,
 ) : Screen() {
@@ -711,10 +778,15 @@ private data class TrackDateRemoverScreen(
         val navigator = LocalNavigator.currentOrThrow
         val screenModel = rememberScreenModel {
             Model(
-                track = track,
+                trackId = trackId,
                 tracker = Injekt.get<TrackerManager>().get(serviceId)!!,
                 start = start,
             )
+        }
+        val state by screenModel.state.collectAsState()
+        if (state == null) {
+            LoadingScreen()
+            return
         }
         AlertDialogContent(
             modifier = Modifier.windowInsetsPadding(WindowInsets.systemBars),
@@ -766,14 +838,22 @@ private data class TrackDateRemoverScreen(
     }
 
     private class Model(
-        private val track: Track,
+        private val trackId: Long,
         private val tracker: Tracker,
         private val start: Boolean,
-    ) : ScreenModel {
+        private val getTracks: GetTracks = Injekt.get(),
+    ) : StateScreenModel<Track?>(null) {
+
+        init {
+            screenModelScope.launch {
+                mutableState.value = getTracks.awaitOne(trackId)
+            }
+        }
 
         fun getServiceName() = tracker.name
 
         fun removeDate() {
+            val track = state.value ?: return
             screenModelScope.launchNonCancellable {
                 if (start) {
                     tracker.setRemoteStartDate(track.toDbTrack(), 0)
@@ -880,7 +960,7 @@ data class TrackerSearchScreen(
 
 private data class TrackerRemoveScreen(
     private val mangaId: Long,
-    private val track: Track,
+    private val trackId: Long,
     private val serviceId: Long,
 ) : Screen() {
 
@@ -890,7 +970,7 @@ private data class TrackerRemoveScreen(
         val screenModel = rememberScreenModel {
             Model(
                 mangaId = mangaId,
-                track = track,
+                trackId = trackId,
                 tracker = Injekt.get<TrackerManager>().get(serviceId)!!,
             )
         }
@@ -958,8 +1038,9 @@ private data class TrackerRemoveScreen(
 
     private class Model(
         private val mangaId: Long,
-        private val track: Track,
+        private val trackId: Long,
         private val tracker: Tracker,
+        private val getTracks: GetTracks = Injekt.get(),
         private val deleteTrack: DeleteTrack = Injekt.get(),
     ) : ScreenModel {
 
@@ -969,6 +1050,7 @@ private data class TrackerRemoveScreen(
 
         fun deleteMangaFromService() {
             screenModelScope.launchNonCancellable {
+                val track = getTracks.awaitOne(trackId) ?: return@launchNonCancellable
                 try {
                     (tracker as DeletableTracker).delete(track)
                 } catch (e: Exception) {
