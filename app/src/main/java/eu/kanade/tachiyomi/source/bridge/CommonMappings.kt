@@ -3,10 +3,10 @@ package eu.kanade.tachiyomi.source.bridge
 
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
-import eu.kanade.tachiyomi.source.model.UpdateStrategy
+import tachiyomi.domain.manga.model.toAndroid
+import tachiyomi.domain.manga.model.toCommon
 import eu.kanade.tachiyomi.source.common.model.SChapter as CommonChapter
 import eu.kanade.tachiyomi.source.common.model.SManga as CommonManga
-import eu.kanade.tachiyomi.source.common.model.UpdateStrategy as CommonUpdateStrategy
 
 /**
  * Thin mapping between the Android extension ABI models and the shared KMP contract models.
@@ -61,13 +61,4 @@ fun CommonChapter.toAndroid(): SChapter = SChapter.create().also {
     it.memo = memo
 }
 
-fun UpdateStrategy.toCommon(): CommonUpdateStrategy = when (this) {
-    UpdateStrategy.ALWAYS_UPDATE -> CommonUpdateStrategy.ALWAYS_UPDATE
-    UpdateStrategy.ONLY_FETCH_ONCE -> CommonUpdateStrategy.ONLY_FETCH_ONCE
-}
-
-fun CommonUpdateStrategy.toAndroid(): UpdateStrategy = when (this) {
-    CommonUpdateStrategy.ALWAYS_UPDATE -> UpdateStrategy.ALWAYS_UPDATE
-    CommonUpdateStrategy.ONLY_FETCH_ONCE -> UpdateStrategy.ONLY_FETCH_ONCE
-}
 // KMK <--

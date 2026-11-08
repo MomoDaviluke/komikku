@@ -125,6 +125,7 @@ fun SManga.copy(
     initialized: Boolean = this.initialized,
     // KMK -->
     memo: JsonObject = this.memo,
+    update_strategy: UpdateStrategy = this.update_strategy,
     // KMK <--
 ) = SManga.create().also {
     it.url = url
@@ -138,6 +139,7 @@ fun SManga.copy(
     it.initialized = initialized
     // KMK -->
     it.memo = memo
+    it.update_strategy = update_strategy
     // KMK <--
 }
 // SY <--

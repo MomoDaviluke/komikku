@@ -12,6 +12,12 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
+                // KMK -->
+                // Explicit: source-api commonMain uses ProgressListener from core:common-kmp.
+                // Relying on the androidMain -> core:common -> core:common-kmp chain would break
+                // as soon as a second target is added.
+                api(projects.core.commonKmp)
+                // KMK <--
                 api(kotlinx.serialization.json)
                 api(libs.injekt)
                 api(libs.rxjava)

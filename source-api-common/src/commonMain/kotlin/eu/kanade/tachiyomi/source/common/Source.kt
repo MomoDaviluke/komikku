@@ -1,7 +1,6 @@
 // KMK -->
 package eu.kanade.tachiyomi.source.common
 
-import eu.kanade.tachiyomi.source.common.QuerySanitizer.sanitize
 import eu.kanade.tachiyomi.source.common.model.FilterList
 import eu.kanade.tachiyomi.source.common.model.MangasPage
 import eu.kanade.tachiyomi.source.common.model.Page
@@ -12,6 +11,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
+import tachiyomi.core.common.util.QuerySanitizer.sanitize
 
 /**
  * Platform-neutral source contract (suspend-only).

@@ -117,6 +117,9 @@ jobs:
       - name: Check code format
         run: ./gradlew spotlessCheck
 
+      - name: Verify commonMain platform neutrality
+        run: ./gradlew verifyCommonMainImports
+
       - name: Build app
         run: ./gradlew assembleRelease -Pinclude-telemetry -Penable-updater
 

@@ -8,6 +8,8 @@ import io.kotest.matchers.shouldBe
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.Test
+import tachiyomi.domain.manga.model.toAndroid
+import tachiyomi.domain.manga.model.toCommon
 import eu.kanade.tachiyomi.source.common.model.UpdateStrategy as CommonUpdateStrategy
 
 class CommonMappingsTest {

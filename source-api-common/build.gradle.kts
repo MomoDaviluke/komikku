@@ -14,6 +14,9 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
+                // KMK -->
+                api(projects.core.commonKmp)
+                // KMK <--
                 api(kotlinx.serialization.json)
                 api(kotlinx.coroutines.core)
             }

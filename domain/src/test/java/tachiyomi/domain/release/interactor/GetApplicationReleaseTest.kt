@@ -57,7 +57,9 @@ class GetApplicationReleaseTest {
         )
 
         // KMK: Don't cast, will throw exception if the result is different from expected
-        result shouldBe GetApplicationRelease.Result.NewUpdate(releases.getLatest()!!)
+        result shouldBe GetApplicationRelease.Result.NewUpdate(
+            releases.first().copy(info = "## r2000\r\rinfo"),
+        )
     }
 
     @Test
@@ -88,7 +90,9 @@ class GetApplicationReleaseTest {
         )
 
         // KMK: Don't cast, will throw exception if the result is different from expected
-        result shouldBe GetApplicationRelease.Result.NewUpdate(releases.getLatest()!!)
+        result shouldBe GetApplicationRelease.Result.NewUpdate(
+            releases.first().copy(info = "## v2.0.0\r\rinfo"),
+        )
     }
 
     @Test

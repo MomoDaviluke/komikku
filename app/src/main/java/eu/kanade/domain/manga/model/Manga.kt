@@ -11,6 +11,7 @@ import tachiyomi.core.metadata.comicinfo.ComicInfo
 import tachiyomi.core.metadata.comicinfo.ComicInfoPublishingStatus
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.manga.model.toAndroid
 import tachiyomi.domain.manga.model.toCommon
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -50,6 +51,9 @@ fun Manga.toSManga(): SManga = SManga.create().also {
     it.thumbnail_url = thumbnailUrl
     it.initialized = initialized
     it.memo = memo
+    // KMK -->
+    it.update_strategy = updateStrategy.toAndroid()
+    // KMK <--
 }
 
 fun Manga.copyFrom(other: SManga): Manga {

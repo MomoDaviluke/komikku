@@ -7,6 +7,7 @@ import eu.kanade.tachiyomi.source.common.model.SChapter
 import eu.kanade.tachiyomi.source.common.model.SManga
 import eu.kanade.tachiyomi.source.common.model.UpdateStrategy
 import eu.kanade.tachiyomi.source.common.model.copy
+import tachiyomi.core.common.util.QuerySanitizer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

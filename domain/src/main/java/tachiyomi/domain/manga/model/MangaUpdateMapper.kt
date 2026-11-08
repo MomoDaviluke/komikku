@@ -1,8 +1,5 @@
 package tachiyomi.domain.manga.model
 
-import eu.kanade.tachiyomi.source.model.UpdateStrategy
-import eu.kanade.tachiyomi.source.common.model.UpdateStrategy as CommonUpdateStrategy
-
 // KMK -->
 fun Manga.toMangaUpdate(): MangaUpdate {
     return MangaUpdate(
@@ -32,10 +29,5 @@ fun Manga.toMangaUpdate(): MangaUpdate {
         notes = notes,
         memo = memo,
     )
-}
-
-fun UpdateStrategy.toCommon(): CommonUpdateStrategy = when (this) {
-    UpdateStrategy.ALWAYS_UPDATE -> CommonUpdateStrategy.ALWAYS_UPDATE
-    UpdateStrategy.ONLY_FETCH_ONCE -> CommonUpdateStrategy.ONLY_FETCH_ONCE
 }
 // KMK <--

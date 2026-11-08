@@ -1,9 +1,10 @@
-# Phase 4 Handover — KMP 深化（2026-11-08）
+# Phase 4 Handover — KMP 深化（2026-11-09 更新）
 
 > 基线：`master@383ffaa81` + 18 commits（`refactor/kmp-common@89d5b97e8`）。
-> 当前工作分支：`feat/kmp-phase4-d1b1`（从 89d5b97e8 起）。
+> 当前工作分支：`feat/kmp-phase4-d1b1`（从 89d5b97e8 起，已推 `588a27e08`，本轮增量待提交）。
 > 前置阅读：`.workbuddy/PROJECT-STATUS-2026-11-08.md`（事实底座）、
-> `.workbuddy/PHASE4-DECISIONS.md`（D1–D4 决策）、`.workbuddy/CODE-REVIEW-2026-11-08.md`（审查结论）。
+> `.workbuddy/PHASE4-DECISIONS.md`（D1–D4 决策）、`.workbuddy/CODE-REVIEW-2026-11-08.md`（审查结论）、
+> `.workbuddy/DEV-PLAN-2026-11-09.md`（Sprint A/B/C 计划）。
 
 ## 1. 本轮做了什么
 
@@ -36,52 +37,103 @@
 - `androidMain/.../Clock.android.kt`、`jvmMain/.../Clock.jvm.kt` 均为 `actual = System.currentTimeMillis()`。
 - `GetApplicationRelease.kt` 改调 `currentTimeMillis()`（原直接 `System.currentTimeMillis()`）。
 
-### 1.3 审查修复
+### 1.3 审查修复（阻断项收口）
 
-- `SManga.copy()` 顶层重载补 `update_strategy`（`SManga.kt`）。
-- `isNewVersion`：段数不等按 0 补齐、`toIntOrNull` 容错、`NON_NUMERIC` 收敛、提为 top-level
-  `internal` 便于测试（`GetApplicationRelease.kt`）。
+- `domain-common/.../GetApplicationRelease.kt`：`isNewVersion` 段数取 max、缺段按 0、`toIntOrNull` 容错、
+  `NON_NUMERIC` 收敛、提为 top-level `internal` 便于测试；节流注释与常量对齐（2 days）。
+- `source-api-common/.../SManga.kt:78-100`：顶层 `copy()` 补 `update_strategy`。
+- `source-api/.../SManga.kt:116-142`：同一契约的 ABI 侧 `copy()` 也补 `update_strategy`（增量复核 M1）。
+- `app/.../manga/model/Manga.kt:40-53`：`toSManga()` 带 `update_strategy = updateStrategy.toAndroid()`。
 - `MangaCover.kt` 补闭合 `// KMK <--`；`GetApplicationRelease.kt` 修 `// KMK --.`；
   `LibraryPreferences.kt` 删悬挂 close。
 - 4 个 CI workflow 补 `jvmTest`（benchmark/preview/push/release）。
+- `Clock.kt`/`Clock.android.kt`/`Clock.jvm.kt`/`ReleaseVersionTest.kt` 补 EOF 换行
+  （增量复核 blocker：原提交 blob 末字节 0x2d，CI `spotlessCheck` 必挂）。
 
-### 1.4 新增测试
+### 1.4 去重与依赖显式化（T3 前置）
+
+- 新建 `domain/src/main/java/tachiyomi/domain/manga/model/UpdateStrategyMappings.kt`：
+  `UpdateStrategy.toCommon()` / `CommonUpdateStrategy.toAndroid()` 的唯一实现。
+- `MangaUpdateMapper.kt` 只保留 `Manga.toMangaUpdate()`；删除重复 `toCommon`。
+- `app/.../bridge/CommonMappings.kt` 删除枚举映射函数，改 import domain 扩展；测试同步。
+- 删除 `source-api-common/.../QuerySanitizer.kt`（62 行重复实现），统一用
+  `core/common-kmp/.../QuerySanitizer`；`Source.kt`、`ModelTest.kt` 改 import。
+- `source-api/build.gradle.kts`、`source-api-common/build.gradle.kts` 的 commonMain 显式
+  `api(projects.core.commonKmp)`，不再依赖 `androidMain` 隐式传递（增量复核 R1）。
+
+### 1.5 T1：commonMain 平台 import 门禁
+
+- `buildSrc/src/main/kotlin/mihon/buildlogic/tasks/CommonMainImportCheckTask.kt`：
+  `@InputDirectory commonMainDir` + `@OutputFile reportFile`；去注释但保留行号；三规则：
+  - `FORBIDDEN_IMPORT`：`^import\s+(android|androidx|java|javax|kotlin\.jvm)\..*`
+  - `JVM_SYSTEM_API`：`System.(currentTimeMillis|nanoTime|getenv|getProperty|getProperties|exit|err|out)`
+  - `PLATFORM_FQCN`：`(android|androidx|java|javax).(app|content|graphics|lang|math|net|nio|os|text|time|util|view|widget).[A-Z]`
+  - 失败抛 `GradleException`，报告写 `build/reports/commonMain-imports.txt`。
+- `buildSrc/src/main/kotlin/mihon.library.gradle.kts`：`pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform")`
+  时注册并挂 `check`；`source-api` 豁免（其 commonMain 仍是伪平台中立，等 D2 拆分）。
+- 5 个 workflow（benchmark/preview/pull_request/push/release）在 `spotlessCheck` 后加
+  `./gradlew verifyCommonMainImports`。
+- 负向验证：临时 `tmp/GateProbe.kt`（`import android.content.Context` + `System.currentTimeMillis()`）
+  使 `:core:common-kmp:verifyCommonMainImports` 按预期 FAILED，探针已删除。
+
+### 1.6 新增测试
 
 - `source-api-common/src/commonTest/.../ModelTest.kt`：`mangaCopyPreservesUpdateStrategy`。
 - `domain-common/src/commonTest/.../ReleaseVersionTest.kt`：稳定版/预览版比较、缺段、非法 tag。
+- `domain/src/test/.../GetApplicationReleaseTest.kt`：改为显式期望对象，消除对 `domain-common`
+  internal `getLatest` 的跨模块引用（该测试 phase3 后从未编译过，属潜伏断裂）。
 
 ## 2. 当前状态
 
-- 8 个 rename + 3 个 Clock 新文件 + 5 个修改文件 + 2 个测试文件；未 commit。
+- 分支 `feat/kmp-phase4-d1b1`，HEAD `588a27e08`（已 push）；工作树另有本轮增量：
+  22 个 tracked 修改（+69/−89）+ 2 个 untracked（`CommonMainImportCheckTask.kt`、
+  `UpdateStrategyMappings.kt`），**尚未 commit、尚未 push**。
 - 未加 iOS target（遵守约束：Windows 禁配；`HostManager.hostIsMac` 全仓不存在，需在 buildSrc 新建）。
-- 未改 D1–D4 之外的业务代码；未改 schema；未 push。
+- 未改 D1–D4 之外的业务语义；未改 schema；未推上游仓库（仅 origin 自有 fork）。
 
-## 3. 验证
+## 3. 验证（本地全量，JDK 21）
 
-- 目标命令（本轮替代 spotless 的门禁）：
-  ```bash
-  ./gradlew :core:common-kmp:jvmTest :source-api-common:jvmTest :domain-common:jvmTest \
-    :source-local:testDebugUnitTest :app:compileDebugKotlin
-  ```
-- 结果：**BUILD SUCCESSFUL in 1m 35s**（329 tasks：107 executed / 213 cached / 9 up-to-date）。
-  `ReleaseVersionTest` 2/2 通过（15:49:48Z），`ModelTest` 6/6 通过（15:49:43Z），
-  `:app:compileDebugKotlin` 通过，无失败用例。详见 `.workbuddy/CODE-REVIEW-2026-11-08.md` §6。
-- `spotlessApply/Check` 本机不可用（环境缺陷，干净树同样复现；已试 daemon 重启、
-  `--refresh-dependencies`、清 `jars-9`、Gradle 9.1、关闭 MSYS 路径转换均无效），
-  见 CODE-REVIEW §4 / PROJECT-STATUS O6。
+必须用 JDK 21（见 §4）：
 
-## 4. 下一步（按顺序）
+```bash
+java -cp gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain \
+  spotlessCheck assembleDebug testReleaseUnitTest jvmTest verifyCommonMainImports \
+  --console=plain "-Dorg.gradle.java.home=C:/Users/Administrator/.jdks/jdk-21.0.13.0.2+1"
+```
+
+- **BUILD SUCCESSFUL in 3m 31s，EXIT=0**。
+- `domain` 的 `GetApplicationReleaseTest`：`tests=4 skipped=0 failures=0 errors=0`
+  （`domain/build/test-results/testReleaseUnitTest/TEST-...GetApplicationReleaseTest.xml`）。
+- `verifyCommonMainImports` 覆盖 core:common-kmp、core:file、domain-common、
+  source-api-common、source-local；`source-api` 暂豁免。
+- 负向有效性见 §1.5。
+
+## 4. 工具链要求（本机环境已踩坑）
+
+- **JDK 21 是硬要求**：机器默认 JDK 26 会在 `:app:compileDebugJavaWithJavac` 的 JdkImageTransform
+  失败（jlink `--disable-plugin system-modules`）；JBR 25 无 `jlink.exe`。
+  本机 JDK 21：`C:\Users\Administrator\.jdks\jdk-21.0.13.0.2+1`（Microsoft Build，201MB）。
+- **spotless 必须 8.11.0**：8.8.0 的 ktlint compat 层引用
+  `com.pinterest.ktlint.rule.engine.api.EditorConfigDefaults` 在运行时不可见，
+  `spotlessCheck` 必报 `NoClassDefFoundError`。已在 `gradle/libs.versions.toml:9` 升级。
+- **MSYS 下 `./gradlew` 可能坏**（`Unable to access jarfile C;/...`）：
+  用 `java -cp gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain <tasks>`。
+
+## 5. 下一步（按顺序）
 
 1. **owner 拍板 D1–D4 + 三个一票否决问题**（`PHASE4-DECISIONS.md`）。
-2. T1 平台 import 门禁（最小、可独立合入）。
-3. T2 `UpdateStrategy` 下沉 → T3 去重/终态 → T4 paging → T5 driver/事务 → T6 storage → T7 LocalSource → T8 archive → T9 文档/ABI。
-4. 工具链：修复/绕开 spotless ktlint（O6）后跑全量门禁，再 commit + PR。
-5. macOS 环境到位后：buildSrc 增 `HostManager`，条件配置 `iosX64/iosArm64/iosSimulatorArm64`，补 actual 与 framework。
+2. 本轮增量 commit + push（全量验证已过）→ 开 PR 拿首次真实 CI（`gh` 不可用，用网页链接）。
+3. T2 `UpdateStrategy` 下沉（DB 不再存 source ordinal）→ T3 剩余项（MangaCover vibrant 拆分、
+   伪 StateFlow、MangaCustomInfo volatile、`track!!` 终态、ChapterSort 归因）→ T4 paging →
+   T5 driver/事务 → T6 storage → T7 LocalSource → T8 archive → T9 ABI/文档。
+4. macOS 环境到位后：buildSrc 增 `HostManager`，条件配置 `iosX64/iosArm64/iosSimulatorArm64`，
+   补 actual 与 framework。
 
-## 5. 风险
+## 6. 风险
 
 - source-api ABI 未变（正向），但 `UpdateStrategy` 仍由 DB ordinal 持久化，枚举重排会静默错读（T2 必做）。
 - `commonMain` 只被 JVM/Android 编译验证过；Native 差异未暴露（Clock 是第一个显式修复）。
 - 8 文件迁移后 `core:common` 仍有 37 个 .kt 依赖 Android；D1 是渐进子集，不是终态。
+- `source-api` 的 commonMain 门禁豁免是技术债：新增第二 target 前必须完成 D2 拆分。
 - 上游补丁失配根因是 `domain-common`/`core:common-kmp` 的 rename（61+12），不是 KMK 标记粒度；
   每次上游同步需按新路径重放补丁。

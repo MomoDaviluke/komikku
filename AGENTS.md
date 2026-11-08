@@ -67,10 +67,14 @@ Every Komikku addition or modification to existing code **must** be wrapped:
 ```bash
 ./gradlew spotlessApply    # fix formatting
 ./gradlew spotlessCheck    # must pass (CI gate)
+./gradlew verifyCommonMainImports  # commonMain platform-import gate
 ./gradlew assembleDebug    # or :app:compileDebugKotlin for a faster compile-only check
 ```
 
 - **Do not** skip `spotlessCheck`. If it fails, run `spotlessApply` and re-run `spotlessCheck`.
+- **Do not** skip `verifyCommonMainImports`: it rejects `android.*`/`androidx.*`/`java.*`/`kotlin.jvm.*`
+  imports, `System.*` calls and platform FQCNs in every KMP module's `commonMain` (`source-api` is
+  temporarily exempt until the D2 split).
 - Use `compileDebugKotlin` instead of `assembleDebug` only if the user asked for a quick compile check — Spotless still applies.
 - Spotless + ktlint config: `buildSrc/src/main/kotlin/mihon.code.lint.gradle.kts` (trim trailing whitespace, end with newline; non-base i18n locales and `**/build/**` excluded).
 
@@ -182,6 +186,7 @@ Gradle `-P` flags (`buildSrc/src/main/kotlin/mihon/buildlogic/BuildConfig.kt`):
 ```bash
 ./gradlew spotlessApply                    # format
 ./gradlew spotlessCheck                    # CI gate
+./gradlew verifyCommonMainImports          # commonMain platform-import gate
 ./gradlew :app:compileDebugKotlin          # compile-only check
 ./gradlew assembleDebug                    # debug APK
 ./gradlew assemblePreview                  # preview (beta) APK, CI equivalent
