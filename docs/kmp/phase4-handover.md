@@ -85,9 +85,9 @@
 
 ## 2. 当前状态
 
-- 分支 `feat/kmp-phase4-d1b1`，HEAD `588a27e08`（已 push）；工作树另有本轮增量：
-  22 个 tracked 修改（+69/−89）+ 2 个 untracked（`CommonMainImportCheckTask.kt`、
-  `UpdateStrategyMappings.kt`），**尚未 commit、尚未 push**。
+- 分支 `feat/kmp-phase4-d1b1`，HEAD `8fe6e3d1e`（已推送 origin，2026-11-09）：本批 T1 门禁 + T3 去重 +
+  ABI/依赖显式化 + 测试修复，覆盖 26 个文件；前一提交 `588a27e08`（D1-B1 + 首轮审查修复）。
+- 工作区干净；未 push 到上游仓库（仅 origin 自有 fork）；无 force push。
 - 未加 iOS target（遵守约束：Windows 禁配；`HostManager.hostIsMac` 全仓不存在，需在 buildSrc 新建）。
 - 未改 D1–D4 之外的业务语义；未改 schema；未推上游仓库（仅 origin 自有 fork）。
 
