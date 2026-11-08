@@ -5,6 +5,7 @@ import eu.kanade.tachiyomi.source.common.model.FilterList
 import eu.kanade.tachiyomi.source.common.model.MangasPage
 import eu.kanade.tachiyomi.source.common.model.SChapter
 import eu.kanade.tachiyomi.source.common.model.SManga
+import eu.kanade.tachiyomi.source.common.model.UpdateStrategy
 import eu.kanade.tachiyomi.source.common.model.copy
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -21,6 +22,21 @@ class ModelTest {
 
         assertEquals("Example", manga.originalTitle)
         assertEquals(listOf("a", "b"), manga.copy(genre = "a, b").getGenres())
+    }
+
+    @Test
+    fun mangaCopyPreservesUpdateStrategy() {
+        val manga = SManga.create().apply {
+            url = "/manga/1"
+            title = "Manga"
+            update_strategy = UpdateStrategy.ONLY_FETCH_ONCE
+        }
+
+        val copy = manga.copy(title = "Renamed")
+
+        assertEquals("Renamed", copy.title)
+        assertEquals("/manga/1", copy.url)
+        assertEquals(UpdateStrategy.ONLY_FETCH_ONCE, copy.update_strategy)
     }
 
     @Test

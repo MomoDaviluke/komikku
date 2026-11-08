@@ -104,6 +104,7 @@ data class MangaCover(
 
         fun dominantCoverColorsSnapshot(): Map<Long, Pair<Int, Int>> = dominantCoverColorsMap.value
     }
+    // KMK <--
 }
 
 fun Manga.asMangaCover(): MangaCover {

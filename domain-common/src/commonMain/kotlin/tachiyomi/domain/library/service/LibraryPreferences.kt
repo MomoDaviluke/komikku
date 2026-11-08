@@ -53,7 +53,6 @@ class LibraryPreferences(
         Preference.appStateKey("pref_library_cover_colors_key"),
         emptySet(),
     )
-    // KMK <--
 
     fun autoUpdateDeviceRestrictions() = preferenceStore.getStringSet(
         "library_update_restriction",

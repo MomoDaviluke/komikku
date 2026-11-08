@@ -2,11 +2,13 @@ package tachiyomi.domain.release.interactor
 
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
+import tachiyomi.core.common.util.system.currentTimeMillis
 import tachiyomi.domain.release.model.Release
 import tachiyomi.domain.release.service.ReleaseService
 
 // KMK -->
 private const val CHECK_INTERVAL_MILLIS = 2L * 24 * 60 * 60 * 1000
+private val NON_NUMERIC = "[^\\d.]".toRegex()
 // KMK <--
 
 class GetApplicationRelease(
@@ -19,9 +21,9 @@ class GetApplicationRelease(
     }
 
     suspend fun await(arguments: Arguments): Result {
-        val now = System.currentTimeMillis()
+        val now = currentTimeMillis()
 
-        // Limit checks to once every 3 days at most
+        // Limit checks to once every 2 days at most
         val nextCheckTime = lastChecked.get() + CHECK_INTERVAL_MILLIS
         if (!arguments.forceCheck && now < nextCheckTime) {
             return Result.NoNewUpdate
@@ -67,46 +69,6 @@ class GetApplicationRelease(
     }
     // KMK <--
 
-    /**
-     * [isPreview] is if current version is Preview (beta) build
-     *
-     * [versionTag] is the version of new release
-     *
-     * Release (stable) version will compare with current's [versionName] ("v0.1.2")
-     *
-     * Preview (beta) version will compare with current's [commitCount] ("r1234")
-     */
-    private fun isNewVersion(
-        isPreview: Boolean,
-        commitCount: Int,
-        versionName: String,
-        versionTag: String,
-    ): Boolean {
-        // Removes prefixes like "r" or "v"
-        val newVersion = versionTag.replace("[^\\d.]".toRegex(), "")
-        return if (isPreview) {
-            // Preview builds: based on releases in "komikku-app/komikku-preview" repo
-            // tagged as something like "r1234"
-            newVersion.toInt() > commitCount
-        } else {
-            // Release builds: based on releases in "komikku-app/komikku" repo
-            // tagged as something like "v0.1.2"
-            val oldVersion = versionName.replace("[^\\d.]".toRegex(), "")
-
-            val newSemVer = newVersion.split(".").map { it.toInt() }
-            val oldSemVer = oldVersion.split(".").map { it.toInt() }
-
-            oldSemVer.mapIndexed { index, i ->
-                if (newSemVer[index] > i) {
-                    return true
-                }
-                if (newSemVer[index] < i) return false
-            }
-
-            false
-        }
-    }
-
     data class Arguments(
         val isFoss: Boolean,
         /** If current version is Preview (beta) build */
@@ -128,7 +90,49 @@ class GetApplicationRelease(
     }
 }
 
-// KMK --.
+/**
+ * [isPreview] is if current version is Preview (beta) build
+ *
+ * [versionTag] is the version of new release
+ *
+ * Release (stable) version will compare with current's [versionName] ("v0.1.2")
+ *
+ * Preview (beta) version will compare with current's [commitCount] ("r1234")
+ */
+internal fun isNewVersion(
+    isPreview: Boolean,
+    commitCount: Int,
+    versionName: String,
+    versionTag: String,
+): Boolean {
+    // Removes prefixes like "r" or "v"
+    val newVersion = versionTag.replace(NON_NUMERIC, "")
+    return if (isPreview) {
+        // Preview builds: based on releases in "komikku-app/komikku-preview" repo
+        // tagged as something like "r1234"
+        newVersion.toIntOrNull()?.let { it > commitCount } ?: false
+    } else {
+        // Release builds: based on releases in "komikku-app/komikku" repo
+        // tagged as something like "v0.1.2"
+        val oldVersion = versionName.replace(NON_NUMERIC, "")
+
+        val newSemVer = newVersion.split(".").mapNotNull(String::toIntOrNull)
+        val oldSemVer = oldVersion.split(".").mapNotNull(String::toIntOrNull)
+        if (newSemVer.isEmpty() || oldSemVer.isEmpty()) return false
+
+        // Compare segment-wise and treat missing segments as 0, so that e.g.
+        // "v0.1" vs "v0.1.2" is not an update instead of crashing.
+        val segmentCount = maxOf(newSemVer.size, oldSemVer.size)
+        for (index in 0 until segmentCount) {
+            val newPart = newSemVer.getOrElse(index) { 0 }
+            val oldPart = oldSemVer.getOrElse(index) { 0 }
+            if (newPart != oldPart) return newPart > oldPart
+        }
+        false
+    }
+}
+
+// KMK -->
 internal fun List<Release>.getLatest(): Release? {
     return firstOrNull()
         ?.copy(

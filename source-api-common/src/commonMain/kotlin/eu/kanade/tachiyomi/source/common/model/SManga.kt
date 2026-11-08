@@ -86,6 +86,7 @@ fun SManga.copy(
     thumbnail_url: String? = this.originalThumbnailUrl,
     initialized: Boolean = this.initialized,
     memo: JsonObject = this.memo,
+    update_strategy: UpdateStrategy = this.update_strategy,
 ) = SManga.create().also {
     it.url = url
     it.title = title
@@ -97,5 +98,6 @@ fun SManga.copy(
     it.thumbnail_url = thumbnail_url
     it.initialized = initialized
     it.memo = memo
+    it.update_strategy = update_strategy
 }
 // KMK <--

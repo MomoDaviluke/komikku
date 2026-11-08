@@ -62,7 +62,7 @@ jobs:
 
       - name: Run unit tests
         id: unit_tests
-        run: ./gradlew testReleaseUnitTest
+        run: ./gradlew testReleaseUnitTest jvmTest
 
       - name: Verify SQLDelight migrations
         run: ./gradlew verifySqlDelightMigration
