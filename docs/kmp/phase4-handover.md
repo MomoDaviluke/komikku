@@ -119,8 +119,9 @@
 
 ## 2. 当前状态
 
-- 分支 `feat/kmp-phase4-d1b1`，HEAD `23b90cd75`（B1a 桥接+适配器，2026-11-10；7 files，+506/−66）：
-  `SourceModelMappings` + `CommonLocalSource` + 测试；删除 app 侧 `CommonMappings`。
+- 分支 `feat/kmp-phase4-d1b1`，HEAD `2792a62a6`（B1a 文档，2026-11-10）；代码提交
+  `23b90cd75`（B1a 桥接+适配器，7 files，+506/−66）：`SourceModelMappings` +
+  `CommonLocalSource` + 测试；删除 app 侧 `CommonMappings`。
 - 前一提交 `6122222f4`（A2 文档）；更早 `bba90cf9d`（A2 五项）、
   `8fe6e3d1e`（T1 门禁 + T3 去重）、`588a27e08`（D1-B1 + 首轮审查修复）。
 - 工作区干净；仅推 origin 自有 fork，绝未推上游；无 force push。
