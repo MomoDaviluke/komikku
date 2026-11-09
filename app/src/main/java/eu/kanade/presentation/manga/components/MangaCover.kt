@@ -217,6 +217,7 @@ enum class MangaCoverHide(private val ratio: Float) {
             )
         }
     }
+    // KMK <--
 }
 
 internal const val RatioSwitchToPanorama = 0.75f

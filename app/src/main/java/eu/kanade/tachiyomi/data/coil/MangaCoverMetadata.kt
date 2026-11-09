@@ -81,7 +81,10 @@ object MangaCoverMetadata {
         force: Boolean = false,
     ) {
         if (!mangaCover.isMangaFavorite) {
-            mangaCover.remove()
+            // KMK -->
+            // Clear only favorite-only data; vibrant color must survive so this shortcut works.
+            MangaCover.removeFavoriteCoverData(mangaCover.mangaId)
+            // KMK <--
             if (mangaCover.vibrantCoverColor != null) return
         }
 

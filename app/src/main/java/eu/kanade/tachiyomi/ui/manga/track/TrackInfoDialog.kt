@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -143,42 +144,57 @@ data class TrackInfoDialogHomeScreen(
                     trackItems = state.trackItems,
                     dateFormat = dateFormat,
                     onStatusClick = {
+                        // KMK -->
+                        val trackId = it.track?.id ?: return@TrackInfoDialogHome
+                        // KMK <--
                         navigator.push(
                             TrackStatusSelectorScreen(
-                                trackId = it.track!!.id,
+                                trackId = trackId,
                                 serviceId = it.tracker.id,
                             ),
                         )
                     },
                     onChapterClick = {
+                        // KMK -->
+                        val trackId = it.track?.id ?: return@TrackInfoDialogHome
+                        // KMK <--
                         navigator.push(
                             TrackChapterSelectorScreen(
-                                trackId = it.track!!.id,
+                                trackId = trackId,
                                 serviceId = it.tracker.id,
                             ),
                         )
                     },
                     onScoreClick = {
+                        // KMK -->
+                        val trackId = it.track?.id ?: return@TrackInfoDialogHome
+                        // KMK <--
                         navigator.push(
                             TrackScoreSelectorScreen(
-                                trackId = it.track!!.id,
+                                trackId = trackId,
                                 serviceId = it.tracker.id,
                             ),
                         )
                     },
                     onStartDateEdit = {
+                        // KMK -->
+                        val trackId = it.track?.id ?: return@TrackInfoDialogHome
+                        // KMK <--
                         navigator.push(
                             TrackDateSelectorScreen(
-                                trackId = it.track!!.id,
+                                trackId = trackId,
                                 serviceId = it.tracker.id,
                                 start = true,
                             ),
                         )
                     },
                     onEndDateEdit = {
+                        // KMK -->
+                        val trackId = it.track?.id ?: return@TrackInfoDialogHome
+                        // KMK <--
                         navigator.push(
                             TrackDateSelectorScreen(
-                                trackId = it.track!!.id,
+                                trackId = trackId,
                                 serviceId = it.tracker.id,
                                 start = false,
                             ),
@@ -195,10 +211,13 @@ data class TrackInfoDialogHomeScreen(
                     },
                     onOpenInBrowser = { openTrackerInBrowser(context, it) },
                     onRemoved = {
+                        // KMK -->
+                        val trackId = it.track?.id ?: return@TrackInfoDialogHome
+                        // KMK <--
                         navigator.push(
                             TrackerRemoveScreen(
                                 mangaId = mangaId,
-                                trackId = it.track!!.id,
+                                trackId = trackId,
                                 serviceId = it.tracker.id,
                             ),
                         )
@@ -365,14 +384,17 @@ data class TrackInfoDialogHomeScreen(
             refreshTracks.await(mangaId)
                 .filter { it.first != null }
                 .forEach { (track, e) ->
+                    // KMK -->
+                    val trackInfo = track ?: return@forEach
+                    // KMK <--
                     logcat(LogPriority.ERROR, e) {
-                        "Failed to refresh track data mangaId=$mangaId for service ${track!!.id}"
+                        "Failed to refresh track data mangaId=$mangaId for service ${trackInfo.id}"
                     }
                     withUIContext {
                         context.toast(
                             context.stringResource(
                                 MR.strings.track_error,
-                                track!!.name,
+                                trackInfo.name,
                                 e.message ?: "",
                             ),
                         )
@@ -382,7 +404,10 @@ data class TrackInfoDialogHomeScreen(
 
         fun togglePrivate(item: TrackItem) {
             screenModelScope.launchNonCancellable {
-                item.tracker.setRemotePrivate(item.track!!.toDbTrack(), !item.track.private)
+                // KMK -->
+                val track = item.track ?: return@launchNonCancellable
+                // KMK <--
+                item.tracker.setRemotePrivate(track.toDbTrack(), !track.private)
             }
         }
 
@@ -430,6 +455,12 @@ private data class TrackStatusSelectorScreen(
             )
         }
         val state by screenModel.state.collectAsState()
+        // KMK -->
+        if (screenModel.isMissing) {
+            LaunchedEffect(Unit) { navigator.pop() }
+            return
+        }
+        // KMK <--
         val currentState = state ?: run {
             LoadingScreen()
             return
@@ -453,11 +484,25 @@ private data class TrackStatusSelectorScreen(
     ) : StateScreenModel<Model.State?>(null) {
 
         private var track: Track? = null
+        // KMK -->
+        private var trackMissing by mutableStateOf(false)
+
+        val isMissing: Boolean
+            get() = trackMissing
+        // KMK <--
 
         init {
             screenModelScope.launch {
-                track = getTracks.awaitOne(trackId)
-                track?.let { mutableState.value = State(it.status) }
+                // KMK -->
+                val loadedTrack = getTracks.awaitOne(trackId)
+                track = loadedTrack
+                if (loadedTrack == null) {
+                    logcat(LogPriority.ERROR) { "Track $trackId is missing for status selector" }
+                    trackMissing = true
+                } else {
+                    mutableState.value = State(loadedTrack.status)
+                }
+                // KMK <--
             }
         }
 
@@ -499,6 +544,12 @@ private data class TrackChapterSelectorScreen(
             )
         }
         val state by screenModel.state.collectAsState()
+        // KMK -->
+        if (screenModel.isMissing) {
+            LaunchedEffect(Unit) { navigator.pop() }
+            return
+        }
+        // KMK <--
         val currentState = state ?: run {
             LoadingScreen()
             return
@@ -523,11 +574,25 @@ private data class TrackChapterSelectorScreen(
     ) : StateScreenModel<Model.State?>(null) {
 
         private var track: Track? = null
+        // KMK -->
+        private var trackMissing by mutableStateOf(false)
+
+        val isMissing: Boolean
+            get() = trackMissing
+        // KMK <--
 
         init {
             screenModelScope.launch {
-                track = getTracks.awaitOne(trackId)
-                track?.let { mutableState.value = State(it.lastChapterRead.toInt()) }
+                // KMK -->
+                val loadedTrack = getTracks.awaitOne(trackId)
+                track = loadedTrack
+                if (loadedTrack == null) {
+                    logcat(LogPriority.ERROR) { "Track $trackId is missing for chapter selector" }
+                    trackMissing = true
+                } else {
+                    mutableState.value = State(loadedTrack.lastChapterRead.toInt())
+                }
+                // KMK <--
             }
         }
 
@@ -575,6 +640,12 @@ private data class TrackScoreSelectorScreen(
             )
         }
         val state by screenModel.state.collectAsState()
+        // KMK -->
+        if (screenModel.isMissing) {
+            LaunchedEffect(Unit) { navigator.pop() }
+            return
+        }
+        // KMK <--
         val currentState = state ?: run {
             LoadingScreen()
             return
@@ -599,11 +670,25 @@ private data class TrackScoreSelectorScreen(
     ) : StateScreenModel<Model.State?>(null) {
 
         private var track: Track? = null
+        // KMK -->
+        private var trackMissing by mutableStateOf(false)
+
+        val isMissing: Boolean
+            get() = trackMissing
+        // KMK <--
 
         init {
             screenModelScope.launch {
-                track = getTracks.awaitOne(trackId)
-                track?.let { mutableState.value = State(tracker.displayScore(it)) }
+                // KMK -->
+                val loadedTrack = getTracks.awaitOne(trackId)
+                track = loadedTrack
+                if (loadedTrack == null) {
+                    logcat(LogPriority.ERROR) { "Track $trackId is missing for score selector" }
+                    trackMissing = true
+                } else {
+                    mutableState.value = State(tracker.displayScore(loadedTrack))
+                }
+                // KMK <--
             }
         }
 
@@ -647,6 +732,12 @@ private data class TrackDateSelectorScreen(
             )
         }
         val state by screenModel.state.collectAsState()
+        // KMK -->
+        if (screenModel.isMissing) {
+            LaunchedEffect(Unit) { navigator.pop() }
+            return
+        }
+        // KMK <--
         val track = state ?: run {
             LoadingScreen()
             return
@@ -730,11 +821,25 @@ private data class TrackDateSelectorScreen(
     ) : StateScreenModel<Track?>(null) {
 
         private var track: Track? = null
+        // KMK -->
+        private var trackMissing by mutableStateOf(false)
+
+        val isMissing: Boolean
+            get() = trackMissing
+        // KMK <--
 
         init {
             screenModelScope.launch {
-                track = getTracks.awaitOne(trackId)
-                mutableState.value = track
+                // KMK -->
+                val loadedTrack = getTracks.awaitOne(trackId)
+                track = loadedTrack
+                if (loadedTrack == null) {
+                    logcat(LogPriority.ERROR) { "Track $trackId is missing for date selector" }
+                    trackMissing = true
+                } else {
+                    mutableState.value = loadedTrack
+                }
+                // KMK <--
             }
         }
 

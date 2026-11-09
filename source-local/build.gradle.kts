@@ -7,6 +7,11 @@ plugins {
 
 kotlin {
     androidTarget()
+    // KMK -->
+    // JVM target gives the commonMain contract (common Source adapter, file system) a
+    // platform-neutral verification target; B1b/B1c move more code here.
+    jvm()
+    // KMK <--
     sourceSets {
         val commonMain by getting {
             dependencies {

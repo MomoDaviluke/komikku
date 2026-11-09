@@ -1419,14 +1419,17 @@ class MangaScreenModel(
             // KMK <--
             .filter { it.first != null }
             .forEach { (track, e) ->
+                // KMK -->
+                val trackInfo = track ?: return@forEach
+                // KMK <--
                 logcat(LogPriority.ERROR, e) {
-                    "Failed to refresh track data mangaId=$mangaId for service ${track!!.id}"
+                    "Failed to refresh track data mangaId=$mangaId for service ${trackInfo.id}"
                 }
                 withUIContext {
                     context.toast(
                         context.stringResource(
                             MR.strings.track_error,
-                            track!!.name,
+                            trackInfo.name,
                             e.message ?: "",
                         ),
                     )

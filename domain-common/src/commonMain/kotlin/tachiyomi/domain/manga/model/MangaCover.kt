@@ -100,6 +100,19 @@ data class MangaCover(
             coverRatios.update { it - mangaId }
         }
 
+        /**
+         * Clears favorite-only cover data (dominant colors and ratio) while preserving the
+         * process-local vibrant color.
+         *
+         * Non-favorite mangas still use the vibrant color for the detail-page theme, so the
+         * non-favorite path in `MangaCoverMetadata.setRatioAndColors` must not call the
+         * full [removeCoverData] before checking for an existing vibrant color.
+         */
+        fun removeFavoriteCoverData(mangaId: Long) {
+            dominantCoverColorsMap.update { it - mangaId }
+            coverRatios.update { it - mangaId }
+        }
+
         fun coverRatiosSnapshot(): Map<Long, Float> = coverRatios.value
 
         fun dominantCoverColorsSnapshot(): Map<Long, Pair<Int, Int>> = dominantCoverColorsMap.value
