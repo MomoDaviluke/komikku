@@ -421,6 +421,23 @@ class LocalSource(
     // Filters
     override fun getFilterList() = FilterList(OrderBy.Popular(context))
 
+    // KMK -->
+    /**
+     * ABI filter list for a requested common-contract sort selection.
+     *
+     * Used by [tachiyomi.source.local.bridge.CommonLocalSource]; `index == 1` means "date",
+     * every other index keeps the title-based `OrderBy.Popular` ordering.
+     */
+    internal fun filterListFor(selection: eu.kanade.tachiyomi.source.model.Filter.Sort.Selection?): FilterList {
+        if (selection == null) return getFilterList()
+        val filterList = if (selection.index == 1) LatestFilters else PopularFilters
+        val sort = filterList.filterIsInstance<eu.kanade.tachiyomi.source.model.Filter.Sort>().firstOrNull()
+            ?: return filterList
+        sort.state = selection
+        return FilterList(sort)
+    }
+    // KMK <--
+
     // Unused stuff
     override suspend fun getPageList(chapter: SChapter): List<Page> = throw UnsupportedOperationException("Unused")
 
