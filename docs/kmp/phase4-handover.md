@@ -83,11 +83,30 @@
 - `domain/src/test/.../GetApplicationReleaseTest.kt`：改为显式期望对象，消除对 `domain-common`
   internal `getLatest` 的跨模块引用（该测试 phase3 后从未编译过，属潜伏断裂）。
 
+### 1.7 A2 review blocker 收口（2026-11-09 第四轮）
+
+> 用户 m01401 授权「清单→顺序→逐项制作」；本轮完成 A2 五项 + `source-local` `jvm()` 前置。
+
+| 项 | 处置 |
+|----|------|
+| A2-1 `ChapterSort` 方向 | 不改。与 `master` 同名文件逐字节一致（历史 `efca89916`/`c06f89268` 仅移动），属上游继承行为。 |
+| A2-2 `MangaCover` vibrant 短路 | `MangaCover.removeFavoriteCoverData(mangaId)` 只清 `dominantCoverColorsMap` + `coverRatios`，保留 `vibrantCoverColors`；`MangaCoverMetadata.kt:83-86` 非收藏分支改用它后再判 vibrant。 |
+| A2-3 `MangaCustomInfo` | provider/installed 均 `@Volatile`，新增 `isInstalled`；未安装返回 null（不 `require` 崩），`install()` 同时置两者。 |
+| A2-4 `track!!` | 全仓 11 处清零（`TrackInfoDialog` 9 + `MangaScreenModel` 2）；4 个 ID 选择器（status/chapter/score/date）加 `isMissing` 终态：ERROR 日志 + `navigator.pop()`。 |
+| A2-5 标记闭合 | `app/.../presentation/manga/components/MangaCover.kt:177` 补 `// KMK <--`（6 开/6 闭）。 |
+| 前置 | `source-local/build.gradle.kts` 加 `jvm()`，为 commonMain 契约提供 JVM 验证 target（暂无测试源）。 |
+
+新增测试：`domain-common/src/commonTest/.../MangaCoverTest.kt`（2 例）、`MangaCustomInfoTest.kt`（1 例）。
+
 ## 2. 当前状态
 
-- 分支 `feat/kmp-phase4-d1b1`，HEAD `8fe6e3d1e`（已推送 origin，2026-11-09）：本批 T1 门禁 + T3 去重 +
-  ABI/依赖显式化 + 测试修复，覆盖 26 个文件；前一提交 `588a27e08`（D1-B1 + 首轮审查修复）。
+- 分支 `feat/kmp-phase4-d1b1`，HEAD `bba90cf9d`（A2 收口，2026-11-09；9 files，+234/−20）：
+  A2 五项修复 + 2 个新测试 + `source-local` `jvm()`。
+- 前一提交 `8fe6e3d1e`（T1 门禁 + T3 去重 + ABI/依赖显式化，26 files）；
+  更早 `588a27e08`（D1-B1 + 首轮审查修复）。
 - 工作区干净；未 push 到上游仓库（仅 origin 自有 fork）；无 force push。
+- **B1a 阻塞**：`SChapter/SManga ↔ common` 的唯一桥在 `app/.../bridge/CommonMappings.kt`，
+  `source-local` 不能依赖 `app`；需 owner 拍板 D2 后才能开工。
 - 未加 iOS target（遵守约束：Windows 禁配；`HostManager.hostIsMac` 全仓不存在，需在 buildSrc 新建）。
 - 未改 D1–D4 之外的业务语义；未改 schema；未推上游仓库（仅 origin 自有 fork）。
 
@@ -101,12 +120,14 @@ java -cp gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain 
   --console=plain "-Dorg.gradle.java.home=C:/Users/Administrator/.jdks/jdk-21.0.13.0.2+1"
 ```
 
-- **BUILD SUCCESSFUL in 3m 31s，EXIT=0**。
+- **BUILD SUCCESSFUL in 3m 21s，EXIT=0**（A2 轮，2026-11-10 00:07；上一轮 T1/T3 为 3m 31s）。
+- 新增用例：`MangaCoverTest` 2/2、`MangaCustomInfoTest` 1/1（`domain-common/build/test-results/jvmTest/`）。
 - `domain` 的 `GetApplicationReleaseTest`：`tests=4 skipped=0 failures=0 errors=0`
   （`domain/build/test-results/testReleaseUnitTest/TEST-...GetApplicationReleaseTest.xml`）。
 - `verifyCommonMainImports` 覆盖 core:common-kmp、core:file、domain-common、
-  source-api-common、source-local；`source-api` 暂豁免。
+  source-api-common、source-local（本轮起含 `jvm()` target）；`source-api` 暂豁免。
 - 负向有效性见 §1.5。
+- 工具链按 §4；全量门禁建议 `--no-daemon`（daemon 偶发挂起，本机已踩坑）。
 
 ## 4. 工具链要求（本机环境已踩坑）
 
