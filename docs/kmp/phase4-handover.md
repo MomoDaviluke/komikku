@@ -98,17 +98,36 @@
 
 新增测试：`domain-common/src/commonTest/.../MangaCoverTest.kt`（2 例）、`MangaCustomInfoTest.kt`（1 例）。
 
+## 1.8 B1a：domain 桥接 + source-local common 适配器（2026-11-10）
+
+- 方案 A（映射落 `domain`）：`source-api` 的 `commonMain` 含 `android.net.Uri`、
+  `java.io.Serializable`、`androidx.compose.runtime.Stable`，`domain-common` 不能依赖它
+  （见 `.workbuddy/B1A-REVIEW-2026-11-10.md` F1）。
+- 新增 `domain/src/main/java/tachiyomi/domain/source/bridge/SourceModelMappings.kt`：
+  `SManga`/`SChapter`/`Page`/`MangasPage`/`FilterList` 双向映射；`Filter.Sort.Selection` 双向；
+  整文件 KMK 标记。
+- 删除 `app/src/main/java/eu/kanade/tachiyomi/source/bridge/CommonMappings.kt` 与
+  `app/src/test/java/eu/kanade/tachiyomi/source/bridge/CommonMappingsTest.kt`（全仓 0 引用，死代码收口）。
+- 新增 `source-local/src/androidMain/kotlin/tachiyomi/source/local/bridge/CommonLocalSource.kt`：
+  实现 common `Source` 并委托 `LocalSource`；`LocalSource.asCommonSource()`。
+- `LocalSource.filterListFor(Filter.Sort.Selection?)`：`index == 1` 用 `LatestFilters`，否则
+  `PopularFilters`，保持 `OrderBy.Popular`/`OrderBy.Latest` 语义。
+- 适配器只放 `androidMain`（依赖 `Context`/archive/metadata）；`supportLatest = false`。
+- 测试：`domain` 映射 6/6、`source-local` 适配器 6/6（委托、排序透传、异常透传）。
+- 未做：其余 `Filter` 类型映射（B1b）、`Page.uri`/`MangasPage.metadata` 字段（LocalSource 不使用）、
+  生产接入（B1b/B1c）。
+
 ## 2. 当前状态
 
-- 分支 `feat/kmp-phase4-d1b1`，HEAD `bba90cf9d`（A2 收口，2026-11-09；9 files，+234/−20）：
-  A2 五项修复 + 2 个新测试 + `source-local` `jvm()`。
-- 前一提交 `8fe6e3d1e`（T1 门禁 + T3 去重 + ABI/依赖显式化，26 files）；
-  更早 `588a27e08`（D1-B1 + 首轮审查修复）。
-- 工作区干净；未 push 到上游仓库（仅 origin 自有 fork）；无 force push。
-- **B1a 阻塞**：`SChapter/SManga ↔ common` 的唯一桥在 `app/.../bridge/CommonMappings.kt`，
-  `source-local` 不能依赖 `app`；需 owner 拍板 D2 后才能开工。
-- 未加 iOS target（遵守约束：Windows 禁配；`HostManager.hostIsMac` 全仓不存在，需在 buildSrc 新建）。
-- 未改 D1–D4 之外的业务语义；未改 schema；未推上游仓库（仅 origin 自有 fork）。
+- 分支 `feat/kmp-phase4-d1b1`，HEAD `23b90cd75`（B1a 桥接+适配器，2026-11-10；7 files，+506/−66）：
+  `SourceModelMappings` + `CommonLocalSource` + 测试；删除 app 侧 `CommonMappings`。
+- 前一提交 `6122222f4`（A2 文档）；更早 `bba90cf9d`（A2 五项）、
+  `8fe6e3d1e`（T1 门禁 + T3 去重）、`588a27e08`（D1-B1 + 首轮审查修复）。
+- 工作区干净；仅推 origin 自有 fork，绝未推上游；无 force push。
+- **B1b/B1c 待拍板**：`LocalSource` 去 `requireUniFile`（8 处）、`stringResource` 注入、
+  `expect isImage` 方案；C2 需 D5（data KMP/加密）。
+- 未加 iOS target（Windows 禁配；`HostManager.hostIsMac` 全仓不存在，需在 buildSrc 新建）。
+- 未改 schema；未推上游仓库（仅 origin 自有 fork）。
 
 ## 3. 验证（本地全量，JDK 21）
 
@@ -120,12 +139,13 @@ java -cp gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain 
   --console=plain "-Dorg.gradle.java.home=C:/Users/Administrator/.jdks/jdk-21.0.13.0.2+1"
 ```
 
-- **BUILD SUCCESSFUL in 3m 21s，EXIT=0**（A2 轮，2026-11-10 00:07；上一轮 T1/T3 为 3m 31s）。
-- 新增用例：`MangaCoverTest` 2/2、`MangaCustomInfoTest` 1/1（`domain-common/build/test-results/jvmTest/`）。
-- `domain` 的 `GetApplicationReleaseTest`：`tests=4 skipped=0 failures=0 errors=0`
-  （`domain/build/test-results/testReleaseUnitTest/TEST-...GetApplicationReleaseTest.xml`）。
+- **BUILD SUCCESSFUL in 1m 4s，EXIT=0**（B1a 轮，2026-11-10 00:44；A2 轮 3m 21s；T1/T3 轮 3m 31s）。
+- B1a 新增用例：`SourceModelMappingsTest` 6/6（`domain/build/test-results/testReleaseUnitTest/`）、
+  `CommonLocalSourceTest` 6/6（`source-local/build/test-results/testDebugUnitTest/`），均 0 失败。
+- A2 轮用例：`MangaCoverTest` 2/2、`MangaCustomInfoTest` 1/1。
+- `domain` 的 `GetApplicationReleaseTest`：`tests=4 skipped=0 failures=0 errors=0`。
 - `verifyCommonMainImports` 覆盖 core:common-kmp、core:file、domain-common、
-  source-api-common、source-local（本轮起含 `jvm()` target）；`source-api` 暂豁免。
+  source-api-common、source-local；`source-api` 暂豁免。
 - 负向有效性见 §1.5。
 - 工具链按 §4；全量门禁建议 `--no-daemon`（daemon 偶发挂起，本机已踩坑）。
 
@@ -142,12 +162,13 @@ java -cp gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain 
 
 ## 5. 下一步（按顺序）
 
-1. **owner 拍板 D1–D4 + 三个一票否决问题**（`PHASE4-DECISIONS.md`）。
-2. 本轮增量 commit + push（全量验证已过）→ 开 PR 拿首次真实 CI（`gh` 不可用，用网页链接）。
-3. T2 `UpdateStrategy` 下沉（DB 不再存 source ordinal）→ T3 剩余项（MangaCover vibrant 拆分、
+1. **owner 拍板 D1–D5 + 三个一票否决问题**（`PHASE4-DECISIONS.md`）。
+2. B1b/B1c：`LocalSource` 契约收口（字符串注入、`expect isImage`、8 处 `requireUniFile`）。
+3. 本轮增量已 commit + push（全量验证已过）→ 开 PR 拿首次真实 CI（`gh` 不可用，用网页链接）。
+4. T2 `UpdateStrategy` 下沉（DB 不再存 source ordinal）→ T3 剩余项（MangaCover vibrant 拆分、
    伪 StateFlow、MangaCustomInfo volatile、`track!!` 终态、ChapterSort 归因）→ T4 paging →
    T5 driver/事务 → T6 storage → T7 LocalSource → T8 archive → T9 ABI/文档。
-4. macOS 环境到位后：buildSrc 增 `HostManager`，条件配置 `iosX64/iosArm64/iosSimulatorArm64`，
+5. macOS 环境到位后：buildSrc 增 `HostManager`，条件配置 `iosX64/iosArm64/iosSimulatorArm64`，
    补 actual 与 framework。
 
 ## 6. 风险
