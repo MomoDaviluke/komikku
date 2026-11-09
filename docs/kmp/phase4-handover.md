@@ -120,7 +120,8 @@
 ## 2. 当前状态
 
 - 分支 `feat/kmp-phase4-d1b1`，HEAD 为 B1a 文档收口提交（2026-11-10，`git log -1` 可查）；
-  代码提交 `23b90cd75`（B1a 桥接+适配器，7 files，+506/−66）：`SourceModelMappings` +
+  代码提交 `23b90cd75`（B1a 桥接+适配器，6 files，+506/−66；含 1 处 rename：
+  app `CommonMappingsTest.kt` → domain `SourceModelMappingsTest.kt`）：`SourceModelMappings` +
   `CommonLocalSource` + 测试；删除 app 侧 `CommonMappings`。
 - 前一提交 `6122222f4`（A2 文档）；更早 `bba90cf9d`（A2 五项）、
   `8fe6e3d1e`（T1 门禁 + T3 去重）、`588a27e08`（D1-B1 + 首轮审查修复）。
