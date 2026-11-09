@@ -86,8 +86,11 @@ class CommonLocalSource(
 /**
  * Copies the requested selection onto a freshly created ABI sort filter.
  *
- * Delegates are expected to return a new [FilterList] per call (LocalSource does), so mutating
- * the returned filter does not leak into shared state.
+ * Never writes into [defaults]: delegates may cache their filter list (or return a shared
+ * instance), so mutating the received filter would leak the requested state into later calls.
+ * The returned filter is a plain [Filter.Sort], which means a delegate whose own filters are
+ * specialised (e.g. `LocalSource`'s `OrderBy`) must be wrapped through `LocalSource.asCommonSource()`
+ * to keep source-specific sorting semantics.
  */
 private fun defaultSortFilters(
     defaults: FilterList,
@@ -95,8 +98,13 @@ private fun defaultSortFilters(
 ): FilterList {
     if (selection == null) return defaults
     val sort = defaults.filterIsInstance<Filter.Sort>().firstOrNull() ?: return defaults
-    sort.state = Filter.Sort.Selection(selection.index, selection.ascending)
-    return FilterList(sort)
+    return FilterList(
+        object : Filter.Sort(
+            sort.name,
+            sort.values,
+            Filter.Sort.Selection(selection.index, selection.ascending),
+        ) {},
+    )
 }
 
 /**

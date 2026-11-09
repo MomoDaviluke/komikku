@@ -14,8 +14,6 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
-import tachiyomi.domain.source.bridge.toAndroid
-import tachiyomi.domain.source.bridge.toCommon
 import eu.kanade.tachiyomi.source.common.model.Filter as CommonFilter
 import eu.kanade.tachiyomi.source.common.model.FilterList as CommonFilterList
 import eu.kanade.tachiyomi.source.common.model.SChapter as CommonChapter
@@ -54,6 +52,42 @@ class CommonLocalSourceTest {
         result.mangas.single().title shouldBe "query"
         val received = delegate.receivedFilters?.single() as Filter.Sort
         received.state shouldBe Filter.Sort.Selection(1, false)
+        Unit
+    }
+
+    @Test
+    fun `search does not mutate the delegate's cached filter list`() = runBlocking<Unit> {
+        val cachedSort = delegate.cachedFilters.single() as Filter.Sort
+        cachedSort.state shouldBe null
+
+        adapter.getSearchManga(
+            1,
+            "first",
+            CommonFilterList(
+                TestCommonSort(
+                    "Order by",
+                    arrayOf("Title", "Date"),
+                    CommonFilter.Sort.Selection(1, false),
+                ),
+            ),
+        )
+        val firstReceived = delegate.receivedFilters?.single() as Filter.Sort
+        firstReceived.state shouldBe Filter.Sort.Selection(1, false)
+
+        adapter.getSearchManga(
+            1,
+            "second",
+            CommonFilterList(
+                TestCommonSort(
+                    "Order by",
+                    arrayOf("Title", "Date"),
+                    CommonFilter.Sort.Selection(0, false),
+                ),
+            ),
+        )
+
+        cachedSort.state shouldBe null
+        firstReceived.state shouldBe Filter.Sort.Selection(1, false)
         Unit
     }
 
@@ -123,9 +157,10 @@ class CommonLocalSourceTest {
 
         var receivedFilters: FilterList? = null
         var pageListFailure: Throwable? = null
-
-        override fun getFilterList(): FilterList =
+        val cachedFilters: FilterList =
             FilterList(TestAndroidSort("Order by", arrayOf("Title", "Date"), null))
+
+        override fun getFilterList(): FilterList = cachedFilters
 
         override suspend fun getPopularManga(page: Int): MangasPage =
             MangasPage(listOf(manga("Popular")), hasNextPage = true)

@@ -115,15 +115,19 @@
   `OrderBy.Popular`（每次新实例，避免改写共享单例）；保持 `OrderBy` 排序语义，但
   `getSearchManga` 的最近更新阈值只对内部 `LatestFilters` 生效，适配器搜索不截断。
 - 适配器只放 `androidMain`（依赖 `Context`/archive/metadata）；`supportsLatest` 委托 delegate
-  （`LocalSource` 为 false）。
+  （`LocalSource.kt:86` 为 `true`）。
 - 测试：`domain` 映射 6/6、`source-local` 适配器 6/6（委托、排序透传、异常透传）。
 - 未做：其余 `Filter` 类型映射（B1b）、`Page.uri`/`MangasPage.metadata` 字段（LocalSource 不使用）、
-  生产接入（B1b/B1c）。
+  生产接入（B1b/B1c）、`filterListFor`/`asCommonSource` 单测（需 Android `Context`，待 B1c 接线前补
+  instrumentation 测试；已由独立评审 E 报告登记 E-02）。
+- 独立复核 E（`.workbuddy/review/E.md`）发现的 E-01 已在 `c0198ca25` 修复：`filterListFor` 每次新建
+  `OrderBy`，不再改写共享 `PopularFilters`/`LatestFilters`；`defaultSortFilters` 也改为构造新
+  `Filter.Sort`（E-05），不再写回 delegate 返回的列表。
 
 ## 2. 当前状态
 
-- 分支 `feat/kmp-phase4-d1b1`，HEAD 为 B1a 文档收口提交（2026-11-10，`git log -1` 可查）；
-  代码提交 `23b90cd75`（B1a 桥接+适配器，6 files，+506/−66；含 1 处 rename：
+- 分支 `feat/kmp-phase4-d1b1`，HEAD 随修复/文档提交前移（2026-11-10 00:58 后为 `c0198ca25`，
+  以 `git log -1` 为准）；代码提交 `23b90cd75`（B1a 桥接+适配器，6 files，+506/−66；含 1 处 rename：
   app `CommonMappingsTest.kt` → domain `SourceModelMappingsTest.kt`）：`SourceModelMappings` +
   `CommonLocalSource` + 测试；删除 app 侧 `CommonMappings`。
 - 前一提交 `6122222f4`（A2 文档）；更早 `bba90cf9d`（A2 五项）、
@@ -147,6 +151,11 @@ java -cp gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain 
 - **BUILD SUCCESSFUL in 1m 4s，EXIT=0**（B1a 轮，2026-11-10 00:44；A2 轮 3m 21s；T1/T3 轮 3m 31s）。
 - 自查修正后复跑：**BUILD SUCCESSFUL in 1m 9s，EXIT=0**（2026-11-10 00:58，1108 tasks；
   `CommonLocalSourceTest` 6/6 通过，日志 `/c/Users/Administrator/AppData/Local/Temp/b1a-gate5.log`）。
+- E 复核收口门禁：`spotlessApply spotlessCheck assembleDebug testReleaseUnitTest jvmTest
+  verifyCommonMainImports` → **BUILD SUCCESSFUL in 1m 5s，EXIT=0**（2026-11-10 01:06，1108 tasks，
+  0 FAILED；`CommonLocalSourceTest` 7/7，含新增「不写回 delegate 缓存 filter list」回归用例，
+  XML `tests="7" failures="0"`；日志 `/c/Users/Administrator/AppData/Local/Temp/b1a-gate6.log`；
+  5 个 debug APK mtime 01:06）。
 - B1a 新增用例：`SourceModelMappingsTest` 6/6（`domain/build/test-results/testReleaseUnitTest/`）、
   `CommonLocalSourceTest` 6/6（门禁产物在 `source-local/build/test-results/testReleaseUnitTest/`，
   `testDebugUnitTest/` 亦有同结果），均 0 失败。
