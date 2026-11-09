@@ -427,14 +427,17 @@ class LocalSource(
      *
      * Used by [tachiyomi.source.local.bridge.CommonLocalSource]; `index == 1` means "date",
      * every other index keeps the title-based `OrderBy.Popular` ordering.
+     *
+     * Builds a fresh [OrderBy] on every call: mutating the shared [PopularFilters]/[LatestFilters]
+     * instances would leak the requested state into later browse calls and race with concurrent
+     * searches. `getSearchManga`'s recency threshold is keyed on the private [LatestFilters]
+     * identity, so adapted searches sort correctly but do not apply that threshold.
      */
     internal fun filterListFor(selection: eu.kanade.tachiyomi.source.model.Filter.Sort.Selection?): FilterList {
         if (selection == null) return getFilterList()
-        val filterList = if (selection.index == 1) LatestFilters else PopularFilters
-        val sort = filterList.filterIsInstance<eu.kanade.tachiyomi.source.model.Filter.Sort>().firstOrNull()
-            ?: return filterList
-        sort.state = selection
-        return FilterList(sort)
+        val orderBy = if (selection.index == 1) OrderBy.Latest(context) else OrderBy.Popular(context)
+        orderBy.state = selection
+        return FilterList(orderBy)
     }
     // KMK <--
 

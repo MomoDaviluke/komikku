@@ -106,13 +106,16 @@
 - 新增 `domain/src/main/java/tachiyomi/domain/source/bridge/SourceModelMappings.kt`：
   `SManga`/`SChapter`/`Page`/`MangasPage`/`FilterList` 双向映射；`Filter.Sort.Selection` 双向；
   整文件 KMK 标记。
-- 删除 `app/src/main/java/eu/kanade/tachiyomi/source/bridge/CommonMappings.kt` 与
-  `app/src/test/java/eu/kanade/tachiyomi/source/bridge/CommonMappingsTest.kt`（全仓 0 引用，死代码收口）。
+- 删除 `app/src/main/java/eu/kanade/tachiyomi/source/bridge/CommonMappings.kt`（全仓 0 引用，
+  死代码收口）；`app/.../source/bridge/CommonMappingsTest.kt` 以 R053 rename 迁到
+  `domain/src/test/.../source/bridge/SourceModelMappingsTest.kt`。
 - 新增 `source-local/src/androidMain/kotlin/tachiyomi/source/local/bridge/CommonLocalSource.kt`：
   实现 common `Source` 并委托 `LocalSource`；`LocalSource.asCommonSource()`。
-- `LocalSource.filterListFor(Filter.Sort.Selection?)`：`index == 1` 用 `LatestFilters`，否则
-  `PopularFilters`，保持 `OrderBy.Popular`/`OrderBy.Latest` 语义。
-- 适配器只放 `androidMain`（依赖 `Context`/archive/metadata）；`supportLatest = false`。
+- `LocalSource.filterListFor(Filter.Sort.Selection?)`：`index == 1` 构造 `OrderBy.Latest`，否则
+  `OrderBy.Popular`（每次新实例，避免改写共享单例）；保持 `OrderBy` 排序语义，但
+  `getSearchManga` 的最近更新阈值只对内部 `LatestFilters` 生效，适配器搜索不截断。
+- 适配器只放 `androidMain`（依赖 `Context`/archive/metadata）；`supportsLatest` 委托 delegate
+  （`LocalSource` 为 false）。
 - 测试：`domain` 映射 6/6、`source-local` 适配器 6/6（委托、排序透传、异常透传）。
 - 未做：其余 `Filter` 类型映射（B1b）、`Page.uri`/`MangasPage.metadata` 字段（LocalSource 不使用）、
   生产接入（B1b/B1c）。
@@ -142,8 +145,11 @@ java -cp gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain 
 ```
 
 - **BUILD SUCCESSFUL in 1m 4s，EXIT=0**（B1a 轮，2026-11-10 00:44；A2 轮 3m 21s；T1/T3 轮 3m 31s）。
+- 自查修正后复跑：**BUILD SUCCESSFUL in 1m 9s，EXIT=0**（2026-11-10 00:58，1108 tasks；
+  `CommonLocalSourceTest` 6/6 通过，日志 `/c/Users/Administrator/AppData/Local/Temp/b1a-gate5.log`）。
 - B1a 新增用例：`SourceModelMappingsTest` 6/6（`domain/build/test-results/testReleaseUnitTest/`）、
-  `CommonLocalSourceTest` 6/6（`source-local/build/test-results/testDebugUnitTest/`），均 0 失败。
+  `CommonLocalSourceTest` 6/6（门禁产物在 `source-local/build/test-results/testReleaseUnitTest/`，
+  `testDebugUnitTest/` 亦有同结果），均 0 失败。
 - A2 轮用例：`MangaCoverTest` 2/2、`MangaCustomInfoTest` 1/1。
 - `domain` 的 `GetApplicationReleaseTest`：`tests=4 skipped=0 failures=0 errors=0`。
 - `verifyCommonMainImports` 覆盖 core:common-kmp、core:file、domain-common、
