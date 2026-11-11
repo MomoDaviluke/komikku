@@ -1,0 +1,76 @@
+name: iOS smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/ios-v0.1
+      - "feat/ios-*"
+    paths:
+      - "iosApp/**"
+      - ".github/workflows/ios-smoke.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-unsigned-ipa:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Toolchain info
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: iosApp
+        run: xcodegen generate
+
+      - name: Build unsigned device app
+        working-directory: iosApp
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project KomikkuIOS.xcodeproj \
+            -scheme KomikkuIOS \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package unsigned IPA
+        working-directory: iosApp
+        run: |
+          set -euo pipefail
+          APP="build/Build/Products/Release-iphoneos/KomikkuIOS.app"
+          test -d "$APP"
+          rm -rf export
+          mkdir -p export/Payload
+          cp -R "$APP" export/Payload/
+          (cd export && zip -qry ../KomikkuIOS-unsigned.ipa Payload)
+          shasum -a 256 KomikkuIOS-unsigned.ipa | tee KomikkuIOS-unsigned.ipa.sha256
+          ls -lh KomikkuIOS-unsigned.ipa
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: KomikkuIOS-unsigned-ipa
+          path: |
+            iosApp/KomikkuIOS-unsigned.ipa
+            iosApp/KomikkuIOS-unsigned.ipa.sha256
+          if-no-files-found: error
+          retention-days: 14

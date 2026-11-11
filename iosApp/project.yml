@@ -1,0 +1,29 @@
+name: KomikkuIOS
+options:
+  bundleIdPrefix: app.komikku
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+targets:
+  KomikkuIOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: KomikkuIOS
+        excludes:
+          - "Info.plist"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.komikku.ios.smoke
+        PRODUCT_NAME: KomikkuIOS
+        INFOPLIST_FILE: KomikkuIOS/Info.plist
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        SUPPORTS_MACCATALYST: NO
