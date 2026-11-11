@@ -27,3 +27,19 @@ targets:
         MARKETING_VERSION: "0.1"
         CURRENT_PROJECT_VERSION: "1"
         SUPPORTS_MACCATALYST: NO
+    scheme:
+      testTargets:
+        - KomikkuIOSUITests
+
+  KomikkuIOSUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: KomikkuIOSUITests
+    dependencies:
+      - target: KomikkuIOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.komikku.ios.smoke.uitests
+        TEST_TARGET_NAME: KomikkuIOS
+        GENERATE_INFOPLIST_FILE: YES

@@ -12,6 +12,7 @@ struct ContentView: View {
 
             Text("Komikku iOS")
                 .font(.largeTitle.bold())
+                .accessibilityIdentifier("smoke.title")
 
             Text("构建流水线 smoke test")
                 .font(.subheadline)
@@ -21,6 +22,7 @@ struct ContentView: View {
                 tapCount += 1
             }
             .buttonStyle(.borderedProminent)
+            .accessibilityIdentifier("smoke.tapButton")
 
             VStack(spacing: 4) {
                 Text("iOS \(UIDevice.current.systemVersion)")

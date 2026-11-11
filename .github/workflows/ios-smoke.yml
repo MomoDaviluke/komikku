@@ -20,7 +20,7 @@ concurrency:
 jobs:
   build-unsigned-ipa:
     runs-on: macos-15
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,6 +36,19 @@ jobs:
       - name: Generate Xcode project
         working-directory: iosApp
         run: xcodegen generate
+
+      - name: Run UI smoke test on simulator
+        working-directory: iosApp
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project KomikkuIOS.xcodeproj \
+            -scheme KomikkuIOS \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -derivedDataPath build-sim \
+            CODE_SIGNING_ALLOWED=NO \
+            test
 
       - name: Build unsigned device app
         working-directory: iosApp
