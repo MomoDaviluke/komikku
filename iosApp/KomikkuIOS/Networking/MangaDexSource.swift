@@ -27,14 +27,49 @@ struct MangaDexSource: MangaSource {
         return payload.data.map { $0.toManga() }
     }
 
-    func chapters(mangaID: String) async throws -> [Chapter] {
-        var components = URLComponents(string: "https://api.mangadex.org/manga/\(mangaID)/feed")!
+    func search(query: String, limit: Int) async throws -> [Manga] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return try await popular(limit: limit) }
+
+        var components = URLComponents(string: "https://api.mangadex.org/manga")!
         components.queryItems = [
+            URLQueryItem(name: "title", value: trimmed),
+            URLQueryItem(name: "limit", value: String(max(1, min(limit, 100)))),
+            URLQueryItem(name: "includes[]", value: "cover_art"),
+            URLQueryItem(name: "order[relevance]", value: "desc"),
+            URLQueryItem(name: "contentRating[]", value: "safe"),
+            URLQueryItem(name: "contentRating[]", value: "suggestive")
+        ]
+
+        let payload: Response = try await getJSON(url: components.url)
+        guard !payload.data.isEmpty else {
+            throw MangaSourceError.emptyResponse
+        }
+        return payload.data.map { $0.toManga() }
+    }
+
+    func chapters(mangaID: String) async throws -> [Chapter] {
+        // Most Komikku users read English scanlations, so prefer them. If a title
+        // has no English chapter, fall back to every available language instead of
+        // showing an empty list.
+        let english = try? await feed(mangaID: mangaID, language: "en")
+        if let english, !english.isEmpty {
+            return english
+        }
+        return try await feed(mangaID: mangaID, language: nil)
+    }
+
+    private func feed(mangaID: String, language: String?) async throws -> [Chapter] {
+        var components = URLComponents(string: "https://api.mangadex.org/manga/\(mangaID)/feed")!
+        var queryItems = [
             URLQueryItem(name: "limit", value: "100"),
-            URLQueryItem(name: "translatedLanguage[]", value: "en"),
             URLQueryItem(name: "order[chapter]", value: "asc"),
             URLQueryItem(name: "includes[]", value: "scanlation_group")
         ]
+        if let language {
+            queryItems.append(URLQueryItem(name: "translatedLanguage[]", value: language))
+        }
+        components.queryItems = queryItems
 
         let payload: FeedResponse = try await getJSON(url: components.url)
         guard !payload.data.isEmpty else {

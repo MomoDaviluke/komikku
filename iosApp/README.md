@@ -4,11 +4,12 @@
 
 ## 当前范围
 
-- 纯 SwiftUI：`TabView` 两个页签——「浏览」（MangaDex 热门列表，`LazyVGrid` + `AsyncImage`，加载/失败/下拉刷新）与「关于」（smoke 信息与点击计数）。
+- 纯 SwiftUI：`TabView` 三个页签——「浏览」（MangaDex 热门/搜索，`LazyVGrid` + `AsyncImage`，加载/失败/下拉刷新）、「书库」（本地收藏，UserDefaults 持久化）、「关于」（smoke 信息与点击计数）。
+- 纵向阅读闭环已打通：浏览 → 详情（封面/简介/章节列表）→ 阅读器（纵向图片流）。章节来自 `/manga/{id}/feed`，图片来自 `/at-home/server/{chapterId}`。
 - 数据层是临时 Swift 实现（`MangaSource` 协议 + `MangaDexSource` + `StubMangaSource`），后续会被 KMP 共享内核替换；UI 测试通过 `-uiTestStub` 注入 stub，不依赖网络。
 - 部署目标 iOS 16.0，仅 iPhone（`TARGETED_DEVICE_FAMILY=1`），Bundle ID `app.komikku.ios.smoke`。
 - 工程文件由 [XcodeGen](https://github.com/yonaskolb/XcodeGen) 从 `project.yml` 生成，不提交 `.xcodeproj`。
-- CI 先在 `iPhone 16` 模拟器跑 UI 测试，再做 `CODE_SIGNING_ALLOWED=NO` 的设备构建，产出 `Payload/KomikkuIOS.app` 并打包成未签名 IPA。
+- CI 分两个 job：设备构建（`CODE_SIGNING_ALLOWED=NO` → 未签名 IPA artifact）与 UI 测试编译（`build-for-testing`，仅编译不跑模拟器——当前 macos-15 runner 上模拟器启动会挂起）。
 
 ## 触发构建
 
@@ -16,7 +17,7 @@
 
 - `KomikkuIOS-unsigned-ipa`（含 `.ipa` 与 sha256）
 
-模拟器 UI 测试会验证：浏览页出现、stub 漫画卡片渲染、关于页点击计数从 0 变 1。
+`KomikkuIOSUITests` 里已有浏览卡片、详情/章节/阅读器、收藏、搜索、关于页交互的用例；当前 CI 只编译测试包，待模拟器问题解决后再恢复执行。
 
 ## 在 Windows 上侧载到 iPhone
 
@@ -41,8 +42,8 @@ xcodebuild -project KomikkuIOS.xcodeproj -scheme KomikkuIOS \
 
 ## 下一步
 
-1. CI 绿 + 真机装上前提下，接 KMP 共享内核（先只读 MangaDex 的 browse/detail/chapter）。
-2. 用 SwiftUI 做 browse → detail → reader 三页最小闭环。
-3. 再加书库、搜索、设置与本地存储。
+1. 真机安装并跑通浏览/详情/阅读器后，把临时 Swift 数据层换成 KMP 共享内核（source-api-common / domain-common）。
+2. 增加第二个、第三个内置源（v0.1 目标 3 个源），并统一分页与错误重试。
+3. 补设置页、阅读进度、离线缓存等 v0.5 功能。
 
 Roadmap 见 `../.workbuddy/ROADMAP-2026-11-11.md` 的 §12/§13（该目录不进 Git，正式文档后续迁到 `docs/ios/`）。

@@ -2,6 +2,7 @@ import Foundation
 
 protocol MangaSource: Sendable {
     func popular(limit: Int) async throws -> [Manga]
+    func search(query: String, limit: Int) async throws -> [Manga]
     func chapters(mangaID: String) async throws -> [Chapter]
     func pages(chapterID: String) async throws -> [URL]
 }

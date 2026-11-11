@@ -5,9 +5,12 @@ final class KomikkuIOSUITests: XCTestCase {
         continueAfterFailure = false
     }
 
-    private func launchStubApp() -> XCUIApplication {
+    private func launchStubApp(resetLibrary: Bool = true) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["-uiTestStub"]
+        if resetLibrary {
+            app.launchArguments.append("-resetLibrary")
+        }
         app.launch()
         return app
     }
@@ -22,6 +25,73 @@ final class KomikkuIOSUITests: XCTestCase {
 
         let firstCard = app.descendants(matching: .any)["manga.card.stub-1"]
         XCTAssertTrue(firstCard.waitForExistence(timeout: 20), "stub 漫画卡片未渲染")
+    }
+
+    func testDetailAndReaderWithStub() {
+        let app = launchStubApp()
+
+        let firstCard = app.descendants(matching: .any)["manga.card.stub-1"]
+        XCTAssertTrue(firstCard.waitForExistence(timeout: 20), "stub 漫画卡片未渲染")
+        firstCard.tap()
+
+        XCTAssertTrue(
+            app.navigationBars["向日葵"].waitForExistence(timeout: 10),
+            "详情页未打开"
+        )
+
+        let chapter = app.staticTexts["第 1 话 · 开始"]
+        XCTAssertTrue(chapter.waitForExistence(timeout: 10), "章节列表未渲染")
+        chapter.tap()
+
+        XCTAssertTrue(
+            app.navigationBars["第 1 话 · 开始"].waitForExistence(timeout: 10),
+            "阅读器未打开"
+        )
+        XCTAssertTrue(
+            app.descendants(matching: .any)["reader.page.1"].waitForExistence(timeout: 10),
+            "阅读器第一页未渲染"
+        )
+    }
+
+    func testSaveToLibraryWithStub() {
+        let app = launchStubApp()
+
+        let firstCard = app.descendants(matching: .any)["manga.card.stub-1"]
+        XCTAssertTrue(firstCard.waitForExistence(timeout: 20), "stub 漫画卡片未渲染")
+        firstCard.tap()
+
+        let save = app.buttons["detail.save"]
+        XCTAssertTrue(save.waitForExistence(timeout: 10), "收藏按钮未出现")
+        save.tap()
+
+        app.navigationBars["向日葵"].buttons.element(boundBy: 0).tap()
+
+        let libraryTab = app.tabBars.buttons["书库"]
+        XCTAssertTrue(libraryTab.waitForExistence(timeout: 10), "书库 tab 未出现")
+        libraryTab.tap()
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["manga.card.stub-1"].waitForExistence(timeout: 10),
+            "收藏的作品未出现在书库"
+        )
+    }
+
+    func testSearchWithStub() {
+        let app = launchStubApp()
+
+        let searchField = app.searchFields.firstMatch
+        XCTAssertTrue(searchField.waitForExistence(timeout: 20), "搜索框未出现")
+        searchField.tap()
+        searchField.typeText("夜行\n")
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["manga.card.stub-2"].waitForExistence(timeout: 20),
+            "搜索结果中未出现匹配作品"
+        )
+        XCTAssertFalse(
+            app.descendants(matching: .any)["manga.card.stub-1"].exists,
+            "搜索结果不应包含不匹配的作品"
+        )
     }
 
     func testAboutScreenInteraction() {

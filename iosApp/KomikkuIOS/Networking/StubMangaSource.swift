@@ -6,6 +6,13 @@ struct StubMangaSource: MangaSource {
         return Array(Manga.stub.prefix(limit))
     }
 
+    func search(query: String, limit: Int) async throws -> [Manga] {
+        try? await Task.sleep(nanoseconds: 150_000_000)
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return try await popular(limit: limit) }
+        return Manga.stub.filter { $0.title.localizedCaseInsensitiveContains(trimmed) }
+    }
+
     func chapters(mangaID: String) async throws -> [Chapter] {
         try? await Task.sleep(nanoseconds: 100_000_000)
         return [

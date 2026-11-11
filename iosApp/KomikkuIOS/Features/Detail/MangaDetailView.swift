@@ -10,6 +10,7 @@ struct MangaDetailView: View {
     let source: MangaSource
 
     @StateObject private var viewModel: MangaDetailViewModel
+    @EnvironmentObject private var library: LibraryStore
 
     init(manga: Manga, source: MangaSource) {
         self.manga = manga
@@ -39,6 +40,17 @@ struct MangaDetailView: View {
         }
         .navigationTitle(manga.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    library.toggle(manga)
+                } label: {
+                    Image(systemName: library.isSaved(manga) ? "bookmark.fill" : "bookmark")
+                }
+                .accessibilityIdentifier("detail.save")
+                .accessibilityLabel(library.isSaved(manga) ? "取消收藏" : "收藏")
+            }
+        }
         .task {
             await viewModel.loadIfNeeded()
         }

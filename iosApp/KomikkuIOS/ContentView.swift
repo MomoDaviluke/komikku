@@ -2,6 +2,8 @@ import SwiftUI
 import UIKit
 
 struct ContentView: View {
+    @StateObject private var library = LibraryStore()
+
     private let source: MangaSource
 
     init(source: MangaSource = AppEnvironment.makeSource()) {
@@ -15,11 +17,17 @@ struct ContentView: View {
                     Label("浏览", systemImage: "square.grid.2x2")
                 }
 
+            LibraryView(source: source)
+                .tabItem {
+                    Label("书库", systemImage: "books.vertical")
+                }
+
             AboutView()
                 .tabItem {
                     Label("关于", systemImage: "info.circle")
                 }
         }
+        .environmentObject(library)
     }
 }
 
