@@ -5,4 +5,19 @@ struct StubMangaSource: MangaSource {
         try? await Task.sleep(nanoseconds: 150_000_000)
         return Array(Manga.stub.prefix(limit))
     }
+
+    func chapters(mangaID: String) async throws -> [Chapter] {
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        return [
+            Chapter(id: "\(mangaID)-1", number: "1", title: "开始", pages: 3, publishAt: nil),
+            Chapter(id: "\(mangaID)-2", number: "2", title: "相遇", pages: 3, publishAt: nil),
+            Chapter(id: "\(mangaID)-3", number: "3", title: "出发", pages: 3, publishAt: nil)
+        ]
+    }
+
+    func pages(chapterID: String) async throws -> [URL] {
+        (1...3).map { index in
+            URL(string: "https://example.invalid/\(chapterID)/\(index).jpg")!
+        }
+    }
 }

@@ -20,7 +20,42 @@ struct MangaDexSource: MangaSource {
             URLQueryItem(name: "contentRating[]", value: "suggestive")
         ]
 
-        guard let url = components.url else { throw MangaSourceError.invalidResponse }
+        let payload: Response = try await getJSON(url: components.url)
+        guard !payload.data.isEmpty else {
+            throw MangaSourceError.emptyResponse
+        }
+        return payload.data.map { $0.toManga() }
+    }
+
+    func chapters(mangaID: String) async throws -> [Chapter] {
+        var components = URLComponents(string: "https://api.mangadex.org/manga/\(mangaID)/feed")!
+        components.queryItems = [
+            URLQueryItem(name: "limit", value: "100"),
+            URLQueryItem(name: "translatedLanguage[]", value: "en"),
+            URLQueryItem(name: "order[chapter]", value: "asc"),
+            URLQueryItem(name: "includes[]", value: "scanlation_group")
+        ]
+
+        let payload: FeedResponse = try await getJSON(url: components.url)
+        guard !payload.data.isEmpty else {
+            throw MangaSourceError.emptyResponse
+        }
+        return payload.data.map { $0.toChapter() }
+    }
+
+    func pages(chapterID: String) async throws -> [URL] {
+        let url = URL(string: "https://api.mangadex.org/at-home/server/\(chapterID)")!
+        let payload: AtHomeResponse = try await getJSON(url: url)
+        guard !payload.chapter.data.isEmpty else {
+            throw MangaSourceError.emptyResponse
+        }
+        return payload.chapter.data.compactMap { fileName in
+            URL(string: "\(payload.baseUrl)/data/\(payload.chapter.hash)/\(fileName)")
+        }
+    }
+
+    private func getJSON<T: Decodable>(url: URL?) async throws -> T {
+        guard let url else { throw MangaSourceError.invalidResponse }
 
         var request = URLRequest(url: url)
         request.timeoutInterval = 20
@@ -33,18 +68,27 @@ struct MangaDexSource: MangaSource {
         guard (200..<300).contains(http.statusCode) else {
             throw MangaSourceError.httpStatus(http.statusCode)
         }
-
-        let payload = try JSONDecoder().decode(Response.self, from: data)
-        guard !payload.data.isEmpty else {
-            throw MangaSourceError.emptyResponse
-        }
-        return payload.data.map { $0.toManga() }
+        return try JSONDecoder().decode(T.self, from: data)
     }
 }
 
 private extension MangaDexSource {
     struct Response: Decodable {
         let data: [Entry]
+    }
+
+    struct FeedResponse: Decodable {
+        let data: [FeedEntry]
+    }
+
+    struct AtHomeResponse: Decodable {
+        struct ChapterPayload: Decodable {
+            let hash: String
+            let data: [String]
+        }
+
+        let baseUrl: String
+        let chapter: ChapterPayload
     }
 
     struct Entry: Decodable {
@@ -67,6 +111,18 @@ private extension MangaDexSource {
         let id: String
         let attributes: Attributes
         let relationships: [Relationship]?
+    }
+
+    struct FeedEntry: Decodable {
+        struct Attributes: Decodable {
+            let chapter: String?
+            let title: String?
+            let pages: Int?
+            let publishAt: String?
+        }
+
+        let id: String
+        let attributes: Attributes
     }
 }
 
@@ -93,6 +149,18 @@ private extension MangaDexSource.Entry {
             coverURL: coverURL,
             year: attributes.year,
             status: attributes.status
+        )
+    }
+}
+
+private extension MangaDexSource.FeedEntry {
+    func toChapter() -> Chapter {
+        Chapter(
+            id: id,
+            number: attributes.chapter ?? "",
+            title: attributes.title,
+            pages: attributes.pages ?? 0,
+            publishAt: attributes.publishAt
         )
     }
 }

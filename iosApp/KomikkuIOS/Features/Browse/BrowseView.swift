@@ -2,10 +2,12 @@ import SwiftUI
 
 struct BrowseView: View {
     @StateObject private var viewModel: BrowseViewModel
+    private let source: MangaSource
 
     private let columns = [GridItem(.adaptive(minimum: 140), spacing: 12)]
 
     init(source: MangaSource) {
+        self.source = source
         _viewModel = StateObject(wrappedValue: BrowseViewModel(source: source))
     }
 
@@ -26,6 +28,12 @@ struct BrowseView: View {
                 .task {
                     await viewModel.loadIfNeeded()
                 }
+                .navigationDestination(for: Manga.self) { manga in
+                    MangaDetailView(manga: manga, source: source)
+                }
+                .navigationDestination(for: ChapterRoute.self) { route in
+                    ReaderView(manga: route.manga, chapter: route.chapter, source: source)
+                }
         }
     }
 
@@ -39,7 +47,10 @@ struct BrowseView: View {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 16) {
                     ForEach(manga) { item in
-                        MangaCard(manga: item)
+                        NavigationLink(value: item) {
+                            MangaCard(manga: item)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(16)
