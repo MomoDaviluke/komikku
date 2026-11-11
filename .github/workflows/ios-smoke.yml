@@ -19,8 +19,9 @@ concurrency:
 
 jobs:
   build-unsigned-ipa:
+    name: build unsigned IPA
     runs-on: macos-15
-    timeout-minutes: 60
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,19 +37,6 @@ jobs:
       - name: Generate Xcode project
         working-directory: iosApp
         run: xcodegen generate
-
-      - name: Run UI smoke test on simulator
-        working-directory: iosApp
-        run: |
-          set -euo pipefail
-          xcodebuild \
-            -project KomikkuIOS.xcodeproj \
-            -scheme KomikkuIOS \
-            -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
-            -derivedDataPath build-sim \
-            CODE_SIGNING_ALLOWED=NO \
-            test
 
       - name: Build unsigned device app
         working-directory: iosApp
@@ -87,3 +75,49 @@ jobs:
             iosApp/KomikkuIOS-unsigned.ipa.sha256
           if-no-files-found: error
           retention-days: 14
+
+  ui-test:
+    name: simulator UI test
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Toolchain info
+        run: |
+          xcodebuild -version
+          xcrun simctl list devices available | head -60
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: iosApp
+        run: xcodegen generate
+
+      - name: Run UI test on simulator
+        working-directory: iosApp
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project KomikkuIOS.xcodeproj \
+            -scheme KomikkuIOS \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -derivedDataPath build-sim \
+            -resultBundlePath TestResults.xcresult \
+            -test-timeouts-enabled YES \
+            -default-test-execution-time-allowance 120 \
+            -maximum-test-execution-time-allowance 180 \
+            CODE_SIGNING_ALLOWED=NO \
+            test
+
+      - name: Upload UI test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: KomikkuIOS-ui-test-results
+          path: iosApp/TestResults.xcresult
+          if-no-files-found: warn
+          retention-days: 7

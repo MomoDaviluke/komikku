@@ -4,16 +4,19 @@
 
 ## 当前范围
 
-- 纯 SwiftUI，单页 smoke test（标题、图标、可点击计数、系统版本）。
+- 纯 SwiftUI：`TabView` 两个页签——「浏览」（MangaDex 热门列表，`LazyVGrid` + `AsyncImage`，加载/失败/下拉刷新）与「关于」（smoke 信息与点击计数）。
+- 数据层是临时 Swift 实现（`MangaSource` 协议 + `MangaDexSource` + `StubMangaSource`），后续会被 KMP 共享内核替换；UI 测试通过 `-uiTestStub` 注入 stub，不依赖网络。
 - 部署目标 iOS 16.0，仅 iPhone（`TARGETED_DEVICE_FAMILY=1`），Bundle ID `app.komikku.ios.smoke`。
 - 工程文件由 [XcodeGen](https://github.com/yonaskolb/XcodeGen) 从 `project.yml` 生成，不提交 `.xcodeproj`。
-- CI 只做 `CODE_SIGNING_ALLOWED=NO` 的设备构建，产出 `Payload/KomikkuIOS.app` 并打包成未签名 IPA。
+- CI 先在 `iPhone 16` 模拟器跑 UI 测试，再做 `CODE_SIGNING_ALLOWED=NO` 的设备构建，产出 `Payload/KomikkuIOS.app` 并打包成未签名 IPA。
 
 ## 触发构建
 
 推送任何 `feat/ios-*` 分支（或手动 `workflow_dispatch`）即可触发 `.github/workflows/ios-smoke.yml`。构建完成后在 Actions 的 Artifacts 里下载：
 
 - `KomikkuIOS-unsigned-ipa`（含 `.ipa` 与 sha256）
+
+模拟器 UI 测试会验证：浏览页出现、stub 漫画卡片渲染、关于页点击计数从 0 变 1。
 
 ## 在 Windows 上侧载到 iPhone
 
