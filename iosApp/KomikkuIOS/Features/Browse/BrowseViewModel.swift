@@ -1,7 +1,6 @@
 import Foundation
 import Combine
 
-@MainActor
 final class BrowseViewModel: ObservableObject {
     enum State: Equatable {
         case loading
@@ -23,12 +22,17 @@ final class BrowseViewModel: ObservableObject {
     }
 
     func reload() async {
-        state = .loading
+        await setState(.loading)
         do {
             let manga = try await source.popular(limit: 24)
-            state = .loaded(manga)
+            await setState(.loaded(manga))
         } catch {
-            state = .failed(error.localizedDescription)
+            await setState(.failed(error.localizedDescription))
         }
+    }
+
+    @MainActor
+    private func setState(_ newState: State) {
+        state = newState
     }
 }
